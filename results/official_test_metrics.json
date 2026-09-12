@@ -1,0 +1,29 @@
+{
+  "dataset": "Celeb-DF v2 official test",
+  "test_samples": 518,
+  "real_samples": 178,
+  "fake_samples": 340,
+  "model": "EfficientNet-B4 visual features + 2-layer LSTM + CHROM-rPPG",
+  "visual_feature_shape": [
+    32,
+    1792
+  ],
+  "rppg_policy": "variable length, maximum 240 samples",
+  "checkpoint": "/kaggle/working/BioVision_Final_Training/biovision_best.pt",
+  "validation_auc": 0.7356973995271868,
+  "threshold_method": "Youden J on validation set only",
+  "selected_threshold": 0.3023790121176095,
+  "TP": 327,
+  "TN": 57,
+  "FP": 121,
+  "FN": 13,
+  "accuracy": 0.7413127413127413,
+  "precision": 0.7299107142857143,
+  "recall_sensitivity": 0.961764705882353,
+  "specificity": 0.3202247191011236,
+  "f1": 0.8299492385786802,
+  "balanced_accuracy": 0.6409947124917383,
+  "roc_auc": 0.7171844018506279,
+  "false_positives": 121,
+  "false_negatives": 13
+}

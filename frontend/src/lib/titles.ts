@@ -1,0 +1,15 @@
+export const PAGE_TITLES: Record<string, string> = {
+  '/': 'BioVision — See Beyond the Frame',
+  '/dashboard': 'Dashboard — BioVision',
+  '/analysis': 'Video Analysis — BioVision',
+  '/results': 'Analysis Results — BioVision',
+  '/history': 'History — BioVision',
+  '/metrics': 'Metrics — BioVision',
+  '/model': 'Model Information — BioVision',
+  '/learn': 'Learn Deepfake Detection — BioVision',
+  '/about': 'About — BioVision',
+  '/contact': 'Contact — BioVision',
+  '/settings': 'Settings — BioVision',
+  '/login': 'Sign In — BioVision',
+  '/register': 'Create Account — BioVision',
+}

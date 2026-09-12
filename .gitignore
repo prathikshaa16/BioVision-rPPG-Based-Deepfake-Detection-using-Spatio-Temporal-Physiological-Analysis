@@ -1,0 +1,31 @@
+# Python environment
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Node / frontend
+node_modules/
+dist/
+
+# Environment / secrets
+.env
+*.env
+
+# Uploaded videos / datasets
+uploads/
+datasets/
+data/
+*.mp4
+*.avi
+*.mov
+
+# Large model formats - ignore by default
+*.pth
+*.h5
+*.onnx
+*.pt
+
+# Allow the BioVision production checkpoint
+!backend/models/
+!backend/models/biovision_best.pt

@@ -1,0 +1,12 @@
+# Add preprocessing and face detection dependencies
+opencv-python>=4.8.0
+torch>=2.1.0
+torchvision>=0.16.0
+facenet-pytorch>=2.5.2
+Pillow>=10.0.0
+numpy>=1.24.0
+# Optional feature extraction/training dependencies for the paper architecture
+librosa>=0.10.0
+mediapipe>=0.10.0
+soundfile>=0.12.1
+imageio-ffmpeg>=0.4.9
