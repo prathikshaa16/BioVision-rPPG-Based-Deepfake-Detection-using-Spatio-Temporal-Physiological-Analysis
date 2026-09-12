@@ -21,7 +21,7 @@ def main():
     print('checkpoint compatible')
     print('output_shape=', tuple(output.shape))
     print('epoch=', state.get('epoch', 'unknown'))
-    print('best_val_auc=', state.get('best_val_auc', 'unknown'))
+    print('best_val_auc=', state.get('best_val_auc', state.get('best_val_roc_auc', 'unknown')))
 
 
 if __name__ == '__main__':

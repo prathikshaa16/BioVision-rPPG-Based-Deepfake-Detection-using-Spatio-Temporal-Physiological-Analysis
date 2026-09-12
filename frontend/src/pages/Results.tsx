@@ -130,6 +130,28 @@ function StatTile({ label, value, sub, accent }: { label: string; value: string;
   )
 }
 
+function ProbabilityBalance({ fakeProbability, realProbability }: { fakeProbability: number; realProbability: number }) {
+  const fake = Math.max(0, Math.min(100, fakeProbability * 100))
+  const real = Math.max(0, Math.min(100, realProbability * 100))
+
+  return (
+    <div className="mt-5 space-y-2.5">
+      <div className="flex items-center justify-between text-[11px] uppercase tracking-wider">
+        <span className="text-emerald-300">Real signal</span>
+        <span className="text-rose-300">Manipulation signal</span>
+      </div>
+      <div className="h-2.5 rounded-full bg-slate-800 overflow-hidden flex">
+        <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500" style={{ width: `${real}%` }} />
+        <div className="h-full bg-gradient-to-r from-rose-400 to-rose-500" style={{ width: `${fake}%` }} />
+      </div>
+      <div className="flex items-center justify-between text-xs font-semibold">
+        <span className="text-slate-300">{formatPercent(realProbability)}</span>
+        <span className="text-slate-300">{formatPercent(fakeProbability)}</span>
+      </div>
+    </div>
+  )
+}
+
 function probabilityColor(p: number | null): string {
   if (p === null) return 'bg-slate-700'
   if (p >= 0.6) return 'bg-rose-400'
@@ -755,6 +777,7 @@ export default function Results() {
               <span className="text-slate-500">Processing Time</span>
               <span className="font-semibold text-slate-100">{formatDuration(result.processing_time)}</span>
             </div>
+            <ProbabilityBalance fakeProbability={result.fake_probability} realProbability={result.real_probability} />
           </div>
         </div>
       </div>
@@ -806,6 +829,8 @@ export default function Results() {
       </Card>
 
       <RppgCard rppg={result.rppg} />
+
+      <FusionCard fusion={result.fusion} visualProbability={result.visual_fake_probability} />
 
       <Card
         title="Frame Analysis"

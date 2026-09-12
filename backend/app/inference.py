@@ -272,7 +272,11 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
             },
         }
 
-    model, model_info = load_model(device=device)
+    model, model_info = load_model(
+        device=device,
+        model_type=chosen_type,
+        checkpoint_path=str(resolved_path),
+    )
     batch = torch.stack(processed_tensors)
     with torch.inference_mode():
         logits = model(batch).squeeze(1)

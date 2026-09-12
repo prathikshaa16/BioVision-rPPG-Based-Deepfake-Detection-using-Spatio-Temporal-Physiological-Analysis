@@ -1,4 +1,7 @@
-"""Evaluate a trained BioVision checkpoint on a held-out feature manifest."""
+"""Evaluate a trained BioVision checkpoint on a held-out feature manifest.
+
+Supports both the legacy JSONL manifests and Kaggle-style cached .pt record files.
+"""
 
 import argparse
 import json
@@ -17,6 +20,7 @@ def main():
     parser.add_argument('--checkpoint', required=True)
     parser.add_argument('--mode', choices=('full', 'visual-rppg'), default='visual-rppg')
     parser.add_argument('--batch-size', type=int, default=8)
+    parser.add_argument('--threshold', type=float, default=0.5)
     args = parser.parse_args()
 
     include_audio_lip = args.mode == 'full'
@@ -29,7 +33,7 @@ def main():
     )
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = (build_biovision_multimodal_model() if include_audio_lip else build_biovision_visual_rppg_model()).to(device)
-    state = torch.load(args.checkpoint, map_location=device)
+    state = torch.load(args.checkpoint, map_location=device, weights_only=False)
     model.load_state_dict(state.get('model_state_dict', state), strict=True)
     model.eval()
 
@@ -38,10 +42,11 @@ def main():
     with torch.inference_mode():
         for batch in loader:
             inputs = {key: value.to(device) for key, value in batch.items() if key != 'labels'}
-            probabilities.extend(torch.sigmoid(model(**inputs)).cpu().tolist())
+            outputs = model(**inputs)
+            probabilities.extend(torch.sigmoid(outputs).cpu().tolist())
             labels.extend(batch['labels'].tolist())
 
-    predictions = [int(probability >= 0.5) for probability in probabilities]
+    predictions = [int(probability >= args.threshold) for probability in probabilities]
     tp = sum(pred == 1 and label == 1 for pred, label in zip(predictions, labels))
     tn = sum(pred == 0 and label == 0 for pred, label in zip(predictions, labels))
     fp = sum(pred == 1 and label == 0 for pred, label in zip(predictions, labels))
@@ -56,6 +61,7 @@ def main():
         'checkpoint': str(Path(args.checkpoint).resolve()),
         'manifest': str(Path(args.manifest).resolve()),
         'mode': args.mode,
+        'threshold': args.threshold,
         'samples': total,
         'tp': tp, 'tn': tn, 'fp': fp, 'fn': fn,
         'accuracy': round(accuracy, 6),

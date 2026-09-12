@@ -2,7 +2,7 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 import Card from '../components/Card'
 import { APP_NAME } from '../lib/nav'
-import { FaEye, FaFingerprint, FaMicrochip, FaShieldAlt, FaArrowRight } from 'react-icons/fa'
+import { FaEye, FaFingerprint, FaMicrochip, FaShieldAlt, FaArrowRight, FaChartLine } from 'react-icons/fa'
 
 export default function About() {
   return (

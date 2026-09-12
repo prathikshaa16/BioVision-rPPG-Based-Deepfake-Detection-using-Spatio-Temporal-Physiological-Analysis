@@ -140,24 +140,24 @@ class CachedBioVisionVisualRppg(nn.Module):
 
     def __init__(self, hidden_size: int = 256):
         super().__init__()
-        self.lstm = nn.LSTM(
+        self.visual_lstm = nn.LSTM(
             input_size=1792,
             hidden_size=hidden_size,
             num_layers=2,
             batch_first=True,
             dropout=0.20,
         )
-        self.phys = nn.Sequential(
+        self.rppg_conv = nn.Sequential(
             nn.Conv1d(1, 32, kernel_size=7, padding=3),
+            nn.BatchNorm1d(32),
             nn.ReLU(),
-            nn.MaxPool1d(2),
             nn.Conv1d(32, 64, kernel_size=5, padding=2),
+            nn.BatchNorm1d(64),
             nn.ReLU(),
             nn.AdaptiveAvgPool1d(1),
         )
-        self.phys_fc = nn.Linear(64, 64)
         self.visual_norm = nn.LayerNorm(hidden_size)
-        self.phys_norm = nn.LayerNorm(64)
+        self.rppg_norm = nn.LayerNorm(64)
         self.classifier = nn.Sequential(
             nn.Linear(hidden_size + 64, 256),
             nn.ReLU(),
@@ -169,10 +169,10 @@ class CachedBioVisionVisualRppg(nn.Module):
         )
 
     def forward(self, visual_features: torch.Tensor, rppg: torch.Tensor) -> torch.Tensor:
-        _, (hidden, _) = self.lstm(visual_features)
+        _, (hidden, _) = self.visual_lstm(visual_features)
         visual = self.visual_norm(hidden[-1])
-        physiological = self.phys(rppg.unsqueeze(1)).squeeze(-1)
-        physiological = self.phys_norm(self.phys_fc(physiological))
+        physiological = self.rppg_conv(rppg.unsqueeze(1)).squeeze(-1)
+        physiological = self.rppg_norm(physiological)
         fused = torch.cat((visual, physiological), dim=1)
         return self.classifier(fused).squeeze(1)
 
