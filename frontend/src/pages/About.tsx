@@ -39,14 +39,14 @@ export default function About() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card title="Our Mission">
           <p className="text-sm text-slate-500 leading-relaxed">
-            Make reliable deepfake verification accessible. We believe detection must be transparent — every verdict
-            is backed by per-frame probabilities and a readable explanation.
+            Make multimodal deepfake verification accessible. Every verdict should expose the visual sequence,
+            temporal representation, physiological signal, and fusion decision behind it.
           </p>
         </Card>
         <Card title="Our Approach">
           <p className="text-sm text-slate-500 leading-relaxed">
-            Frame sampling, face-level analysis, physiological signal extraction, and quality-gated late fusion. No
-            black boxes: the model, weights, thresholds, and pipeline are documented in the Model page.
+            Face-sequence processing, EfficientNet-B4 spatial features, LSTM temporal modeling, rPPG extraction,
+            and trained feature fusion. The model contract and pipeline are documented in the Model page.
           </p>
         </Card>
         <Card title="Our Commitment">
@@ -60,11 +60,11 @@ export default function About() {
       <Card title="How the pipeline works">
         <ul className="space-y-3">
           {[
-            { icon: FaEye, t: 'Frame extraction', d: '15 uniform samples drawn across the video.' },
-            { icon: FaFingerprint, t: 'Face detection', d: 'MTCNN locates faces and crops the largest region per frame.' },
-            { icon: FaMicrochip, t: 'Model inference', d: 'EfficientNet-B4 scores each face crop as a fake probability.' },
-            { icon: FaChartLine, t: 'Physiological analysis', d: 'CHROM extracts a temporal pulse signal and estimates its quality.' },
-            { icon: FaShieldAlt, t: 'Evidence fusion', d: 'Visual and physiological evidence combine with a transparent 80/20 cap.' },
+            { icon: FaEye, t: 'Video sequence', d: 'Facial regions are sampled and standardized for sequence analysis.' },
+            { icon: FaFingerprint, t: 'Spatial representation', d: 'EfficientNet-B4 encodes each selected facial crop.' },
+            { icon: FaMicrochip, t: 'Temporal modeling', d: 'An LSTM learns dependencies across the ordered visual representations.' },
+            { icon: FaChartLine, t: 'Physiological analysis', d: 'CHROM-derived rPPG features provide an additional temporal evidence channel.' },
+            { icon: FaShieldAlt, t: 'Feature fusion', d: 'The trained BioVision fusion head combines visual-temporal and physiological features.' },
           ].map((s) => (
             <li key={s.t} className="flex gap-4">
               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-cyan-400/15 to-blue-500/15 border border-cyan-400/25 flex items-center justify-center flex-shrink-0">

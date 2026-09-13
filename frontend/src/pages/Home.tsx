@@ -162,23 +162,23 @@ function ForensicVisual() {
             />
           ))}
         </div>
-        <div className="text-[10px] text-slate-500 mt-2 text-center">15 uniform samples → MTCNN → EfficientNet-B4</div>
+        <div className="text-[10px] text-slate-500 mt-2 text-center">Face sequence → EfficientNet-B4 → LSTM → rPPG → fusion</div>
 
         <div className="mt-4 grid grid-cols-3 gap-3 text-center">
           <div className="glass-inset p-3">
             <FaMicrochip className="w-4 h-4 text-cyan-400 mx-auto mb-1.5" />
             <div className="text-[11px] text-slate-300 font-medium">EfficientNet-B4</div>
-            <div className="text-[10px] text-slate-500">per-face inference</div>
+            <div className="text-[10px] text-slate-500">spatial features</div>
           </div>
           <div className="glass-inset p-3">
             <FaFingerprint className="w-4 h-4 text-blue-400 mx-auto mb-1.5" />
             <div className="text-[11px] text-slate-300 font-medium">MTCNN</div>
-            <div className="text-[10px] text-slate-500">face detection</div>
+            <div className="text-[10px] text-slate-500">sequence modeling</div>
           </div>
           <div className="glass-inset p-3">
             <FaChartLine className="w-4 h-4 text-emerald-400 mx-auto mb-1.5" />
-            <div className="text-[11px] text-slate-300 font-medium">Aggregation</div>
-            <div className="text-[10px] text-slate-500">mean · median · std</div>
+            <div className="text-[11px] text-slate-300 font-medium">CHROM rPPG</div>
+            <div className="text-[10px] text-slate-500">physiological evidence</div>
           </div>
         </div>
       </div>

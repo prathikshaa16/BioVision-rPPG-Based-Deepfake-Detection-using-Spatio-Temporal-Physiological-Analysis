@@ -638,7 +638,7 @@ function FusionCard({ fusion, visualProbability }: { fusion?: AnalysisResult['fu
         <div className="glass-inset p-4">
           <div className="text-[11px] text-slate-500 uppercase tracking-wider mb-1">Fused Score</div>
           <div className="text-2xl font-bold text-cyan-300">{formatPercent(fusion.probability)}</div>
-          <div className="text-xs text-slate-500 mt-1">{hasRppg ? '80% visual + 20% rPPG' : 'Visual-only fallback'}</div>
+          <div className="text-xs text-slate-500 mt-1">{hasRppg ? 'Trained visual-temporal + rPPG fusion' : 'Visual-temporal fallback'}</div>
         </div>
       </div>
     </Card>
@@ -814,8 +814,8 @@ export default function Results() {
       </div>
 
       <Card
-        title="Frame-by-Frame Analysis"
-        subtitle={`Fake probability per sampled frame (${chartData.length} frames) · dashed lines mark REAL (≤40%) and FAKE (≥60%) thresholds`}
+        title="Sequence Evidence"
+        subtitle={`Model evidence across the analyzed facial sequence (${chartData.length} observations) · dashed lines mark REAL (≤40%) and FAKE (≥60%) thresholds`}
       >
         <SimpleLineChart
           data={chartData}
@@ -833,8 +833,8 @@ export default function Results() {
       <FusionCard fusion={result.fusion} visualProbability={result.visual_fake_probability} />
 
       <Card
-        title="Frame Analysis"
-        subtitle="Index, face count, probability, and classification for each sampled frame — from the actual backend response"
+        title="Sequence Observations"
+        subtitle="Ordered facial observations and model probabilities returned by the backend"
       >
         {frameRows.length === 0 ? (
           <div className="empty-state">

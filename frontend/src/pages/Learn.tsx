@@ -45,13 +45,13 @@ const TOPICS: Topic[] = [
   },
   {
     icon: FaFilm,
-    title: 'Frame-Level Analysis',
-    desc: 'Why sampling frames and analyzing each one individually is a robust detection strategy.',
+    title: 'Spatio-Temporal Analysis',
+    desc: 'Why ordered facial representations reveal evidence that a single image can miss.',
     points: [
-      'Manipulation artifacts are easier to isolate at the frame level than in a whole video.',
-      'Uniform sampling ensures coverage across the full temporal range of the clip.',
-      'Per-frame probabilities let analysts see when a video dips in and out of suspicious regions.',
-      'BioVision samples 15 uniform frames and reports each frame\u2019s prediction.',
+      'Spatial features capture facial details while temporal modeling captures how they change.',
+      'Ordered sampling preserves coverage across the full temporal range of the clip.',
+      'The LSTM models dependencies across the facial representation sequence.',
+      'BioVision combines visual-temporal evidence with CHROM-derived physiological features.',
     ],
   },
   {

@@ -39,7 +39,7 @@ export default function ModelInfo() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${API_BASE}/model/info`)
+      const res = await fetch(`${API_BASE}/model/info?model_type=cached`)
       if (res.ok) {
         const data = await res.json()
         setModelInfo(data)

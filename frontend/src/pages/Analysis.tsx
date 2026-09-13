@@ -29,11 +29,11 @@ const BACKEND_HINT = 'python -m uvicorn backend.app.main:app --port 8000'
 
 const STAGES = [
   { icon: FaCloudUploadAlt, label: 'Uploading video' },
-  { icon: FaFilm, label: 'Extracting frames' },
-  { icon: FaFingerprint, label: 'Detecting faces' },
-  { icon: FaRobot, label: 'Running AI analysis' },
-  { icon: FaWaveSquare, label: 'Extracting physiological signal' },
-  { icon: FaLayerGroup, label: 'Aggregating results' },
+  { icon: FaFilm, label: 'Processing facial sequence' },
+  { icon: FaFingerprint, label: 'Extracting spatial features' },
+  { icon: FaRobot, label: 'Modeling temporal dependencies' },
+  { icon: FaWaveSquare, label: 'Analyzing rPPG physiology' },
+  { icon: FaLayerGroup, label: 'Fusing multimodal evidence' },
   { icon: FaFileAlt, label: 'Generating report' },
 ]
 
@@ -115,7 +115,7 @@ export default function Analysis() {
     form.append('file', selectedFile)
 
     const xhr = new XMLHttpRequest()
-    xhr.open('POST', `${API_BASE}/upload`)
+    xhr.open('POST', `${API_BASE}/upload?model_type=cached`)
     xhr.timeout = UPLOAD_TIMEOUT_MS
     xhrRef.current = xhr
 
@@ -265,7 +265,7 @@ export default function Analysis() {
           >
             <div className="space-y-4">
               <div className="flex items-center justify-between gap-3 flex-wrap">
-                <span className="text-xs text-slate-500">Pipeline: 15 frames → MTCNN → EfficientNet-B4 + CHROM rPPG → quality-gated fusion</span>
+                <span className="text-xs text-slate-500">Pipeline: face sequence → EfficientNet-B4 → LSTM → rPPG → trained fusion</span>
                 <span
                   className={`chip ${
                     backendOffline

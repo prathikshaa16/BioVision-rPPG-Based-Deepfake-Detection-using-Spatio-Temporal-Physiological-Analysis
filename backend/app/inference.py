@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 
 import numpy as np
 import torch
+from PIL import Image
 from torchvision import models
 
 from .config import DEFAULT_SAMPLE_FRAMES, resolve_model_paths
@@ -61,6 +62,8 @@ def _prepare_cached_visual_features(video_path: str, device: str = 'cpu', n_fram
     indices = sample_frame_indices(meta['frame_count'], n_samples=n_frames)
     frames = read_frames_by_indices(video_path, indices)
     fp = FaceProcessor(device=device)
+    weights = models.EfficientNet_B4_Weights.DEFAULT
+    feature_transform = weights.transforms()
     face_tensors: List[torch.Tensor] = []
     for frame in frames:
         if frame is None:
@@ -69,11 +72,18 @@ def _prepare_cached_visual_features(video_path: str, device: str = 'cpu', n_fram
         if not boxes:
             continue
         largest_box = max(boxes, key=lambda box: (box[2] - box[0]) * (box[3] - box[1]))
-        crop = fp.detect_and_crop(frame)
-        if not crop:
+        x1, y1, x2, y2 = largest_box
+        margin = 20
+        height, width = frame.shape[:2]
+        x1 = max(0, x1 - margin)
+        y1 = max(0, y1 - margin)
+        x2 = min(width, x2 + margin)
+        y2 = min(height, y2 + margin)
+        face_rgb = frame[y1:y2, x1:x2, ::-1]
+        if face_rgb.size == 0:
             continue
-        largest_crop = max(crop, key=lambda item: item.size[0] * item.size[1])
-        face_tensors.append(fp.preprocess_pil(largest_crop).to(device))
+        face_image = Image.fromarray(face_rgb)
+        face_tensors.append(feature_transform(face_image).to(device))
 
     if not face_tensors:
         raise ValueError('NO_FACE_DETECTED')
@@ -85,7 +95,7 @@ def _prepare_cached_visual_features(video_path: str, device: str = 'cpu', n_fram
     if batch.shape[0] > n_frames:
         batch = batch[:n_frames]
 
-    backbone = models.efficientnet_b4(weights=None)
+    backbone = models.efficientnet_b4(weights=weights)
     backbone = backbone.to(device)
     backbone.eval()
     with torch.inference_mode():
@@ -140,6 +150,7 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
         else:
             result = 'UNCERTAIN'
         processing_time = time.time() - start_time
+        signal_available = bool(torch.any(rppg_vector != 0).item())
         return {
             'analysis_id': f"{os.path.basename(video_path)}-{int(start_time * 1000)}",
             'filename': os.path.basename(video_path),
@@ -149,19 +160,38 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
             'fake_probability': float(probability),
             'real_probability': 1.0 - float(probability),
             'visual_fake_probability': float(probability),
+            'frame_predictions': [float(probability)],
+            'mean_probability': float(probability),
+            'median_probability': float(probability),
+            'std_probability': 0.0,
+            'variance': 0.0,
+            'min_probability': float(probability),
+            'max_probability': float(probability),
+            'consistency': 1.0,
             'frames_sampled': 32,
             'frames_with_faces': 32,
             'frames_without_faces': 0,
             'faces_detected': 32,
             'processing_time': round(processing_time, 3),
-            'model_name': 'cached visual+rppg baseline',
+            'model_name': 'BioVision EfficientNet-B4 sequence + rPPG LSTM fusion',
             'model_version': os.path.basename(str(resolved_path)),
             'model_kind': 'cached',
             'device': device,
             'model_load_info': model_info,
             'meta': meta,
             'rppg': {
-                'status': 'AVAILABLE' if len(rppg_vector) else 'UNAVAILABLE',
+                'status': 'AVAILABLE' if signal_available else 'UNAVAILABLE',
+                'explanation': 'The cached BioVision inference contract supplied a padded physiological vector to the trained fusion model.' if signal_available else 'A usable physiological vector was not recovered; the cached fusion model received a zero-padded fallback.',
+                'frames_used': int(torch.count_nonzero(rppg_vector).item()),
+                'heart_rate_bpm': None,
+                'dominant_frequency': None,
+                'signal_quality': None,
+                'quality_metrics': None,
+                'signal': None,
+                'filtered_signal': None,
+                'frequency': None,
+                'roi': None,
+                'window': None,
                 'input_length': int(rppg_vector.shape[0]),
                 'vector': rppg_vector.detach().cpu().tolist(),
             },
