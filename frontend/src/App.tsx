@@ -31,14 +31,17 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route element={<DefaultLayout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/analysis" element={<Analysis />} />
           <Route path="/results" element={<Results />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/metrics" element={<Metrics />} />
+          <Route path="/architecture" element={<ModelInfo />} />
           <Route path="/model" element={<ModelInfo />} />
+          <Route path="/evaluation" element={<Metrics />} />
+          <Route path="/metrics" element={<Metrics />} />
+          <Route path="/how-it-works" element={<Learn />} />
           <Route path="/learn" element={<Learn />} />
+          <Route path="/history" element={<History />} />
           <Route path="/about" element={<About />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/settings" element={<Settings />} />
         </Route>

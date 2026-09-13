@@ -68,7 +68,7 @@ async def model_info(model_type: str = Query(default=DEFAULT_MODEL_TYPE, descrip
         if chosen_type == 'cached':
             payload = {
                 "model_kind": "cached",
-                "model_name": "cached visual+rppg baseline",
+                "model_name": "BioVision Spatio-Temporal + Physiological (EfficientNet-B4 + LSTM + CHROM rPPG)",
                 "model_version": os.path.basename(resolved_path),
                 "device": device,
                 "checkpoint_path": str(resolved_path),
@@ -76,13 +76,14 @@ async def model_info(model_type: str = Query(default=DEFAULT_MODEL_TYPE, descrip
                 "missing_keys": info.get('missing_keys', []),
                 "unexpected_keys": info.get('unexpected_keys', []),
                 "analysis_components": [
-                    {"name": "visual-temporal embeddings", "role": "32 sampled face crops -> 1792-d EfficientNet features", "output": "[32,1792] ordered embedding sequence", "weighted": True},
-                    {"name": "chrom-rppg", "role": "contiguous physiological signal from the face ROI", "output": "[240] pulse vector aggregated by the notebook contract", "weighted": True},
-                    {"name": "cached classifier", "role": "trained visual+rppg fusion head", "output": "single fake logit for the video verdict", "weighted": True},
+                    {"name": "spatial & temporal branch", "role": "32 sampled face crops -> 1792-d EfficientNet-B4 features -> 2-layer LSTM", "output": "[256] temporal representation", "weighted": True},
+                    {"name": "physiological branch", "role": "contiguous skin ROI color variations -> CHROM rPPG vector [240] -> 1D-CNN", "output": "[64] physiological feature vector", "weighted": True},
+                    {"name": "multimodal fusion classifier", "role": "trained feature fusion head combining [256 + 64 = 320] dimensions", "output": "single fake logit for the video verdict", "weighted": True},
                 ],
                 "verdict_note": (
-                    "This is the Colab cached-feature BioVision baseline. It expects precomputed visual features and a "
-                    "240-sample rPPG vector and runs a trained fusion head rather than the raw-frame legacy path."
+                    "BioVision executes dual-branch spatio-temporal and physiological analysis: 32 ordered facial crops are "
+                    "encoded via EfficientNet-B4 and a 2-layer LSTM, while CHROM extracts a 240-sample rPPG pulse vector encoded via a "
+                    "1D-CNN. The combined 320-d features feed the trained multimodal fusion head."
                 ),
             }
         else:

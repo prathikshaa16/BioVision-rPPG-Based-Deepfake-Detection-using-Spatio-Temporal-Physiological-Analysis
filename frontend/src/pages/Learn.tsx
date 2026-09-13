@@ -1,198 +1,147 @@
-import React, { useState } from 'react'
+import React from 'react'
 import Card from '../components/Card'
 import {
-  FaBookOpen,
-  FaUsers,
-  FaFilm,
-  FaChartLine,
-  FaRobot,
-  FaChevronDown,
   FaVideo,
-  FaLightbulb,
+  FaEye,
+  FaMicrochip,
+  FaBrain,
+  FaHeartbeat,
+  FaLayerGroup,
   FaShieldAlt,
-  FaSearch,
+  FaCheckCircle,
+  FaBookOpen,
 } from 'react-icons/fa'
 
-interface Topic {
-  icon: React.ComponentType<{ className?: string }>
-  title: string
-  desc: string
-  points: string[]
-}
-
-const TOPICS: Topic[] = [
+const METHODOLOGY_STEPS = [
   {
-    icon: FaBookOpen,
-    title: 'How Deepfakes Work',
-    desc: 'The generative techniques — GANs, autoencoders, and diffusion models — that create synthetic faces.',
-    points: [
-      'Generative Adversarial Networks pit a generator against a discriminator to produce photorealistic output.',
-      'Autoencoders learn a compact encoding of a face that can be swapped or reenacted onto another person.',
-      'Diffusion models progressively denoise random noise into images, enabling high-fidelity synthesis.',
-      'Detection looks for the subtle artifacts these generative processes tend to leave behind.',
-    ],
+    step: '01',
+    title: 'Video Acquisition',
+    desc: 'Video is provided as the input to BioVision.',
+    details:
+      'The system accepts standard video formats (MP4, AVI, MOV, WebM). Uniform temporal sequence sampling extracts representative facial observations across the full duration of the video, ensuring temporal relationships are preserved.',
+    icon: FaVideo,
+    color: 'text-cyan-400',
+    borderColor: 'border-cyan-500/30',
   },
   {
-    icon: FaUsers,
-    title: 'Face Manipulation',
-    desc: 'How identity replacement and expression reenactment are performed — and where artifacts appear.',
-    points: [
-      'Identity swap replaces one face with another while keeping the source video motion.',
-      'Expression reenactment copies facial movements from a source onto a target face.',
-      'Artifacts often concentrate around eyes, mouth, teeth, and hair boundaries.',
-      'Lighting, skin texture, and blinking inconsistencies are common forensic signals.',
-    ],
+    step: '02',
+    title: 'Facial Region Processing',
+    desc: 'Facial regions are detected and standardized for analysis.',
+    details:
+      'Multi-task Cascaded Convolutional Networks (MTCNN) identify facial bounding boxes in sampled frames. Face crops are extracted with a 20-pixel margin and resized to 224×224 pixels. Forehead and cheek regions of interest (ROIs) are tracked for physiological signal extraction.',
+    icon: FaEye,
+    color: 'text-cyan-300',
+    borderColor: 'border-cyan-500/30',
   },
   {
-    icon: FaFilm,
-    title: 'Visual-Temporal Analysis',
-    desc: 'Why a sequence of EfficientNet-B4 embeddings and an LSTM is useful for video forensics.',
-    points: [
-      'A sequence preserves changes in face appearance and motion across the clip.',
-      'Uniform sampling provides coverage across the full temporal range of the video.',
-      'The LSTM converts the 32 embedding sequence into a 256-dimensional temporal representation.',
-      'BioVision combines this visual context with a 64-dimensional CHROM-rPPG representation.',
-    ],
+    step: '03',
+    title: 'Spatial Representation',
+    desc: 'EfficientNet-B4 extracts visual representations from facial regions.',
+    details:
+      'A pretrained EfficientNet-B4 convolutional neural network extracts 1,792-dimensional feature vectors from each standardized face crop, encoding micro-textures, blending artifacts, and boundary inconsistencies.',
+    icon: FaMicrochip,
+    color: 'text-blue-400',
+    borderColor: 'border-blue-500/30',
   },
   {
-    icon: FaChartLine,
-    title: 'Understanding Confidence',
-    desc: 'What a confidence score means, how it is computed, and how to read it responsibly.',
-    points: [
-      'BioVision computes confidence as how far the mean probability sits from the 50% decision boundary.',
-      'High confidence means the mean was far from the boundary; low confidence means borderline.',
-      'Confidence expresses model certainty, not the probability the verdict is correct.',
-      'Use confidence to decide whether further manual review is warranted.',
-    ],
+    step: '04',
+    title: 'Temporal Representation',
+    desc: 'An LSTM models temporal dependencies across the sequence.',
+    details:
+      'Rather than treating frames as independent static images, a 2-layer Long Short-Term Memory (LSTM) network analyzes the ordered sequence of 1,792-d spatial embeddings, capturing cross-frame dynamics and motion consistency into a compact 256-d temporal representation.',
+    icon: FaBrain,
+    color: 'text-blue-300',
+    borderColor: 'border-blue-500/30',
   },
   {
-    icon: FaSearch,
-    title: 'Detecting Visual Artifacts',
-    desc: 'The forensic fingerprints generated images leave behind — and where to look for them.',
-    points: [
-      'Generator upscaling often blurs or distorts fine facial details like teeth and ear edges.',
-      'Inconsistent lighting, specular highlights, and skin texture are common tells.',
-      'Face boundaries can flicker between frames where reenactment was applied.',
-      'The model learns these subtle statistical cues that are hard to see with the naked eye.',
-    ],
+    step: '05',
+    title: 'Physiological Signal Extraction',
+    desc: 'CHROM-based rPPG processing extracts physiological information from facial color variations.',
+    details:
+      'Remote photoplethysmography (rPPG) monitors subtle color fluctuations in facial capillary beds caused by cardiac pulse cycles. The chrominance-based (CHROM) method isolates hemoglobin absorption from lighting and motion artifacts, outputting a 240-sample pulse vector encoded via a 1D-CNN into 64 physiological features.',
+    icon: FaHeartbeat,
+    color: 'text-emerald-400',
+    borderColor: 'border-emerald-500/30',
   },
   {
-    icon: FaRobot,
-    title: 'How AI Forensics Works',
-    desc: 'How EfficientNet-B4 learns forensic indicators and why the head architecture matters.',
-    points: [
-      'EfficientNet-B4 is a scalable convolutional backbone pretrained on ImageNet.',
-      'The visual-temporal branch produces 256 dimensions and the rPPG branch produces 64 dimensions.',
-      'The trained fusion head maps the combined 320-dimensional representation to a fake probability in [0, 1].',
-      'The result page exposes the probability, confidence, temporal evidence, and physiological charts.',
-    ],
+    step: '06',
+    title: 'Multimodal Fusion',
+    desc: 'Visual/temporal and physiological evidence are integrated.',
+    details:
+      'The 256-d visual-temporal representation and 64-d physiological representation are concatenated into a 320-d multimodal feature vector. A quality-gated late fusion strategy weights the visual branch at 80% and physiological branch at 20%, adjusting dynamically if signal quality is compromised.',
+    icon: FaLayerGroup,
+    color: 'text-purple-400',
+    borderColor: 'border-purple-500/30',
+  },
+  {
+    step: '07',
+    title: 'Deepfake Classification',
+    desc: 'The fused representation is used to generate the final assessment.',
+    details:
+      'A multilayer perceptron classification head processes the fused representation, applying sigmoid activation to produce a continuous manipulation probability. Operating thresholds optimized via Youden J on validation benchmarks output the final verdict: REAL, FAKE, or UNCERTAIN.',
+    icon: FaShieldAlt,
+    color: 'text-rose-400',
+    borderColor: 'border-rose-500/30',
   },
 ]
 
-function TopicCard({ topic }: { topic: Topic }) {
-  const [open, setOpen] = useState(false)
-  const Icon = topic.icon
-  return (
-    <div className="glass-card overflow-hidden">
-      <button onClick={() => setOpen((v) => !v)} className="w-full text-left p-6 flex items-start justify-between gap-4">
-        <div className="flex items-start gap-4">
-          <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-cyan-400/15 to-blue-500/15 border border-cyan-400/25 flex items-center justify-center flex-shrink-0">
-            <Icon className="w-5 h-5 text-cyan-300" />
-          </div>
-          <div>
-            <div className="text-base font-semibold text-slate-100">{topic.title}</div>
-            <div className="text-sm text-slate-500 mt-1 leading-relaxed">{topic.desc}</div>
-          </div>
-        </div>
-        <FaChevronDown className={`w-4 h-4 text-slate-500 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <div className="px-6 pb-6 pt-1">
-          <ul className="space-y-2.5">
-            {topic.points.map((p) => (
-              <li key={p} className="flex items-start gap-2.5 text-sm text-slate-400 leading-relaxed">
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 flex-shrink-0" />
-                {p}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  )
-}
-
 export default function Learn() {
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-10">
       <header className="page-head">
         <div>
-          <h2 className="page-title">Learn Deepfake Detection</h2>
-          <p className="page-sub">Guided lessons on how deepfakes are made and how AI uncovers them</p>
+          <h2 className="page-title">Our Methodology</h2>
+          <p className="page-sub">
+            The seven-step scientific framework powering BioVision spatio-temporal &amp; physiological deepfake detection
+          </p>
         </div>
         <span className="chip chip--info">
-          <span className="status-dot bg-cyan-400" />
-          {TOPICS.length} Lessons
+          <FaBookOpen className="w-3.5 h-3.5" />
+          Research Methodology
         </span>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="glass-card p-5 flex items-start gap-4">
-          <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-cyan-400/15 to-blue-500/15 border border-cyan-400/25 flex items-center justify-center flex-shrink-0">
-            <FaVideo className="w-5 h-5 text-cyan-300" />
-          </div>
-          <div>
-            <div className="text-sm font-semibold text-slate-100 mb-1">Video lessons</div>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Guided video walkthroughs will appear here once they are produced. No lessons are being faked today —
-              every topic below is a text primer you can read now.
-            </p>
-          </div>
-        </div>
-        <div className="glass-card p-5 flex items-start gap-4">
-          <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-cyan-400/15 to-blue-500/15 border border-cyan-400/25 flex items-center justify-center flex-shrink-0">
-            <FaLightbulb className="w-5 h-5 text-cyan-300" />
-          </div>
-          <div>
-            <div className="text-sm font-semibold text-slate-100 mb-1">Why it matters</div>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Understanding the forensic pipeline helps you read confidence scores, spot borderline cases, and verify
-              media responsibly.
-            </p>
-          </div>
-        </div>
-      </div>
-
+      {/* 7-STEP METHODOLOGY FLOW */}
       <div className="space-y-4">
-        {TOPICS.map((topic) => (
-          <TopicCard key={topic.title} topic={topic} />
+        {METHODOLOGY_STEPS.map((s) => (
+          <div key={s.step} className={`glass-card p-6 border ${s.borderColor} hover:border-cyan-400/50 transition-colors`}>
+            <div className="flex flex-col md:flex-row md:items-start gap-5">
+              <div className="flex-shrink-0 flex items-center md:flex-col gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center font-mono font-extrabold text-cyan-400 text-base shadow-inner">
+                  {s.step}
+                </div>
+                <s.icon className={`w-5 h-5 ${s.color} hidden md:block`} />
+              </div>
+
+              <div className="flex-1 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-slate-100">{s.title}</h3>
+                  <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider">Step {s.step}</span>
+                </div>
+                <p className="text-sm font-semibold text-cyan-300/90">{s.desc}</p>
+                <p className="text-xs text-slate-400 leading-relaxed pt-1">{s.details}</p>
+              </div>
+            </div>
+          </div>
         ))}
       </div>
 
-      <Card title="Reading BioVision Verdicts" subtitle="The exact thresholds used by the backend classification">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="border-l-4 border-emerald-500 pl-4">
-            <p className="font-semibold text-emerald-400 mb-1">REAL</p>
-            <p className="text-sm text-slate-500">Mean fake probability ≤ 40% — no strong manipulation indicators.</p>
-          </div>
-          <div className="border-l-4 border-rose-500 pl-4">
-            <p className="font-semibold text-rose-400 mb-1">FAKE</p>
-            <p className="text-sm text-slate-500">Mean fake probability ≥ 60% — elevated manipulation evidence.</p>
-          </div>
-          <div className="border-l-4 border-amber-500 pl-4">
-            <p className="font-semibold text-amber-400 mb-1">UNCERTAIN</p>
-            <p className="text-sm text-slate-500">Mean between 40% and 60% — manual review recommended.</p>
-          </div>
-        </div>
-      </Card>
-
-      <Card title="Detection Ethics" className="border-cyan-400/20">
-        <div className="flex items-start gap-3">
-          <FaShieldAlt className="w-5 h-5 text-cyan-300 mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-slate-500 leading-relaxed">
-            Detection is probabilistic and not perfect. False positives and negatives can occur. Use this tool
-            responsibly, respect privacy, and consider legal and ethical implications before sharing or acting on
-            results.
+      {/* CORE SCIENTIFIC INSIGHTS */}
+      <Card title="Why Single-Frame Classification Is Insufficient">
+        <div className="space-y-3 text-sm text-slate-400 leading-relaxed">
+          <p>
+            Traditional deepfake detectors rely on frame-by-frame convolutional classification, averaging individual predictions to reach a verdict. This approach suffers from two critical vulnerabilities:
+          </p>
+          <ul className="space-y-2 pl-4 border-l-2 border-cyan-500/30 text-xs">
+            <li>
+              <strong className="text-slate-200">Loss of Temporal Coherence:</strong> Manipulation artifacts frequently manifest as flickering boundaries, unnatural motion velocity, or inconsistent eye-blink patterns across time. Isolated frame analysis cannot detect these temporal disruptions.
+            </li>
+            <li>
+              <strong className="text-slate-200">Absence of Physiological Grounding:</strong> Generative models and face-swap autoencoders synthesize visual textures but do not simulate the subtle subcutaneous blood circulation that produces authentic cardiac pulses (rPPG).
+            </li>
+          </ul>
+          <p className="pt-2 text-xs text-slate-300">
+            BioVision unites spatio-temporal deep learning with remote photoplethysmography to evaluate both how a face looks and how it behaves biologically over time.
           </p>
         </div>
       </Card>

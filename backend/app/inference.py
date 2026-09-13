@@ -98,8 +98,8 @@ def _prepare_cached_visual_features(video_path: str, device: str = 'cpu', n_fram
     return features.to(device)
 
 
-def _prepare_cached_rppg_vector(video_path: str, meta: Dict[str, Any], device: str = 'cpu', size: int = 240) -> torch.Tensor:
-    """Return a notebook-compatible [240] pulse vector padded/truncated to length 240."""
+def _prepare_cached_rppg_vector(video_path: str, meta: Dict[str, Any], device: str = 'cpu', size: int = 240):
+    """Return a notebook-compatible [240] pulse vector padded/truncated to length 240 and the rppg signal dict."""
     signal = run_rppg_analysis(video_path, meta, device=device)
     values = signal.get('filtered_signal', {}).get('amplitude') if signal.get('status') == 'AVAILABLE' else None
     if values is None:
@@ -112,15 +112,17 @@ def _prepare_cached_rppg_vector(video_path: str, meta: Dict[str, Any], device: s
             values = padded
         elif values.size > size:
             values = values[:size]
-    return torch.as_tensor(values, dtype=torch.float32, device=device)
+    tensor = torch.as_tensor(values, dtype=torch.float32, device=device)
+    return tensor, signal
 
 
 def analyze_video(video_path: str, device: str = None, model_type: str = None, checkpoint_path: str = None) -> Dict[str, Any]:
     """Run video sampling, face detection, model inference, aggregation and rPPG.
 
-    EfficientNet-B4 produces per-frame FAKE probabilities (>= 0.5 = fake per
-    the checkpoint's model card). CHROM rPPG is extracted from a contiguous
-    window and quality-gated late fusion combines both evidence channels.
+    Dual-branch multimodal inference:
+    1. Spatial & Temporal: 32 ordered facial crops -> EfficientNet-B4 (1792-d) -> 2-layer LSTM (256-d).
+    2. Physiological: CHROM rPPG signal (240-d) -> 1D-CNN (64-d).
+    3. Multimodal Late Fusion: Combined 320-d features classified by trained fusion head.
     """
     start_time = time.time()
     device = device or _get_device()
@@ -130,12 +132,61 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
             meta = validate_video(video_path)
         except Exception as exc:
             raise ValueError(f"Invalid video file: {exc}") from exc
-        visual_features = _prepare_cached_visual_features(video_path, device=device, n_frames=32)
-        rppg_vector = _prepare_cached_rppg_vector(video_path, meta, device=device, size=240)
+        try:
+            visual_features = _prepare_cached_visual_features(video_path, device=device, n_frames=32)
+        except ValueError as exc:
+            if 'NO_FACE_DETECTED' in str(exc):
+                processing_time = time.time() - start_time
+                return {
+                    'analysis_id': f"{os.path.basename(video_path)}-{int(start_time * 1000)}",
+                    'filename': os.path.basename(video_path),
+                    'status': 'completed',
+                    'result': 'NO_FACE',
+                    'confidence': 0.0,
+                    'fake_probability': 0.0,
+                    'real_probability': 0.0,
+                    'visual_fake_probability': None,
+                    'frames_sampled': 32,
+                    'frames_with_faces': 0,
+                    'frames_without_faces': 32,
+                    'faces_detected': 0,
+                    'frame_predictions': [],
+                    'processing_time': round(processing_time, 3),
+                    'model_name': 'BioVision Spatio-Temporal + Physiological (EfficientNet-B4 + LSTM + CHROM rPPG)',
+                    'model_version': os.path.basename(str(resolved_path)),
+                    'model_kind': 'cached',
+                    'device': device,
+                    'meta': meta,
+                    'explanation': (
+                        'No usable face was detected across the sampled sequence, so deepfake '
+                        'classification could not be performed. No REAL or FAKE probability was computed.'
+                    ),
+                    'rppg': {
+                        'status': 'SKIPPED',
+                        'explanation': 'No usable face was detected in the sampled frames, so no physiological signal was extracted.',
+                        'frames_used': 0,
+                        'heart_rate_bpm': None,
+                        'dominant_frequency': None,
+                        'signal_quality': None,
+                    },
+                }
+            raise
+        rppg_vector, rppg_signal = _prepare_cached_rppg_vector(video_path, meta, device=device, size=240)
         model, model_info = load_model(device=device, model_type=chosen_type, checkpoint_path=str(resolved_path))
         with torch.inference_mode():
-            logits = model(visual_features.unsqueeze(0), rppg_vector.unsqueeze(0)).squeeze(1)
-            probability = torch.sigmoid(logits).detach().cpu().item()
+            logits = model(visual_features.unsqueeze(0), rppg_vector.unsqueeze(0)).view(-1)
+            probability = torch.sigmoid(logits[0]).detach().cpu().item()
+
+            # Sequence trajectory across observations
+            lstm_out, _ = model.visual_lstm(visual_features.unsqueeze(0))
+            phys_feat = model.rppg_norm(model.rppg_conv(rppg_vector.unsqueeze(0).unsqueeze(1)).squeeze(-1))
+            step_preds = []
+            for t in range(visual_features.shape[0]):
+                step_vis = model.visual_norm(lstm_out[:, t, :])
+                step_fused = torch.cat((step_vis, phys_feat), dim=1)
+                step_p = torch.sigmoid(model.classifier(step_fused).view(-1)[0]).item()
+                step_preds.append(round(step_p, 4))
+
         if probability >= 0.60:
             result = 'FAKE'
         elif probability <= 0.40:
@@ -143,6 +194,19 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
         else:
             result = 'UNCERTAIN'
         processing_time = time.time() - start_time
+
+        # Ensure rppg payload includes vector and length
+        if isinstance(rppg_signal, dict):
+            rppg_payload = dict(rppg_signal)
+            rppg_payload['input_length'] = int(rppg_vector.shape[0])
+            rppg_payload['vector'] = rppg_vector.detach().cpu().tolist()
+        else:
+            rppg_payload = {
+                'status': 'AVAILABLE' if len(rppg_vector) else 'UNAVAILABLE',
+                'input_length': int(rppg_vector.shape[0]),
+                'vector': rppg_vector.detach().cpu().tolist(),
+            }
+
         return {
             'analysis_id': f"{os.path.basename(video_path)}-{int(start_time * 1000)}",
             'filename': os.path.basename(video_path),
@@ -156,18 +220,16 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
             'frames_with_faces': 32,
             'frames_without_faces': 0,
             'faces_detected': 32,
+            'frame_predictions': step_preds,
+            'mean_probability': float(probability),
             'processing_time': round(processing_time, 3),
-            'model_name': 'cached visual+rppg baseline',
+            'model_name': 'BioVision Spatio-Temporal + Physiological (EfficientNet-B4 + LSTM + CHROM rPPG)',
             'model_version': os.path.basename(str(resolved_path)),
             'model_kind': 'cached',
             'device': device,
             'model_load_info': model_info,
             'meta': meta,
-            'rppg': {
-                'status': 'AVAILABLE' if len(rppg_vector) else 'UNAVAILABLE',
-                'input_length': int(rppg_vector.shape[0]),
-                'vector': rppg_vector.detach().cpu().tolist(),
-            },
+            'rppg': rppg_payload,
             'cached_features': {
                 'visual_shape': [int(visual_features.shape[0]), int(visual_features.shape[1])],
                 'rppg_shape': [int(rppg_vector.shape[0])],
