@@ -12,12 +12,19 @@ missing audio or landmark stream cannot be silently converted into zeros.
 import argparse
 import json
 import random
+import time
 from pathlib import Path
 from typing import Any, Dict, List
 
 import numpy as np
 import torch
-from sklearn.metrics import balanced_accuracy_score, f1_score
+from sklearn.metrics import (
+    balanced_accuracy_score,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
@@ -275,6 +282,18 @@ def evaluate_threshold(labels, probabilities, metric='balanced_accuracy'):
     return best_threshold, best_score
 
 
+def classification_metrics(labels, probabilities, threshold=0.5):
+    predictions = (probabilities >= threshold).astype(int)
+    return {
+        'accuracy': float(np.mean(predictions == labels)),
+        'precision': float(precision_score(labels, predictions, zero_division=0)),
+        'recall': float(recall_score(labels, predictions, zero_division=0)),
+        'f1': float(f1_score(labels, predictions, zero_division=0)),
+        'balanced_accuracy': float(balanced_accuracy_score(labels, predictions)),
+        'auc': float(roc_auc_score(labels, probabilities)) if len(np.unique(labels)) == 2 else None,
+    }
+
+
 def run_epoch(model, loader, optimizer, device, pos_weight=None, use_focal=False):
     training = optimizer is not None
     model.train(training)
@@ -319,6 +338,7 @@ def main():
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--mode', choices=('full', 'visual-rppg'), default='full')
+    parser.add_argument('--history', default=None, help='JSON path for epoch metrics and run metadata')
     args = parser.parse_args()
 
     random.seed(args.seed)
@@ -335,11 +355,45 @@ def main():
     best_val_score = -1.0
     patience = 6
     stale = 0
+    history_path = Path(args.history) if args.history else Path(args.output).with_suffix('.history.json')
+    history = {
+        'mode': args.mode,
+        'train_manifest': str(Path(args.train_manifest).resolve()),
+        'val_manifest': str(Path(args.val_manifest).resolve()),
+        'output': str(Path(args.output).resolve()),
+        'epochs_requested': args.epochs,
+        'batch_size': args.batch_size,
+        'learning_rate': args.lr,
+        'seed': args.seed,
+        'device': str(device),
+        'cuda_available': torch.cuda.is_available(),
+        'gpu_name': torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
+        'train_samples': len(train_loader.dataset),
+        'val_samples': len(val_loader.dataset),
+        'train_positive': sum(int(float(record['label'])) for record in train_loader.dataset.records),
+        'val_positive': sum(int(float(record['label'])) for record in val_loader.dataset.records),
+        'epochs': [],
+    }
+    training_start = time.time()
     for epoch in range(1, args.epochs + 1):
-        train_loss, train_accuracy, _, _ = run_epoch(model, train_loader, optimizer, device, pos_weight=pos_weight, use_focal=True)
+        train_loss, train_accuracy, train_probs, train_labels = run_epoch(model, train_loader, optimizer, device, pos_weight=pos_weight, use_focal=True)
         val_loss, val_accuracy, val_probs, val_labels = run_epoch(model, val_loader, None, device, pos_weight=pos_weight, use_focal=True)
         threshold, val_balanced_score = evaluate_threshold(val_labels, val_probs, metric='balanced_accuracy')
-        print(f'epoch={epoch:02d} train_loss={train_loss:.4f} train_acc={train_accuracy:.4f} val_loss={val_loss:.4f} val_acc={val_accuracy:.4f} val_balanced_acc={val_balanced_score:.4f} threshold={threshold:.3f}')
+        train_metrics = classification_metrics(train_labels, train_probs)
+        val_metrics = classification_metrics(val_labels, val_probs, threshold)
+        epoch_record = {
+            'epoch': epoch,
+            'train_loss': train_loss,
+            'val_loss': val_loss,
+            'train_metrics': train_metrics,
+            'val_metrics': val_metrics,
+            'threshold': threshold,
+            'learning_rate': optimizer.param_groups[0]['lr'],
+        }
+        history['epochs'].append(epoch_record)
+        history_path.parent.mkdir(parents=True, exist_ok=True)
+        history_path.write_text(json.dumps(history, indent=2), encoding='utf-8')
+        print(f'epoch={epoch:02d} train_loss={train_loss:.4f} val_loss={val_loss:.4f} train_auc={train_metrics["auc"]} val_auc={val_metrics["auc"]} train_f1={train_metrics["f1"]:.4f} val_f1={val_metrics["f1"]:.4f} val_balanced_acc={val_balanced_score:.4f} threshold={threshold:.3f}')
         if val_balanced_score > best_val_score:
             best_val_score = val_balanced_score
             stale = 0
@@ -352,6 +406,9 @@ def main():
                 print('early stopping')
                 break
         scheduler.step()
+    history['epochs_completed'] = len(history['epochs'])
+    history['training_seconds'] = round(time.time() - training_start, 3)
+    history_path.write_text(json.dumps(history, indent=2), encoding='utf-8')
 
 
 if __name__ == '__main__':

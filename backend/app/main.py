@@ -1,5 +1,7 @@
 import os
 import uuid
+import json
+from pathlib import Path
 from typing import Dict, List
 
 import aiofiles
@@ -8,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 
-from .config import MAX_UPLOAD_SIZE, MODEL_PATH, UPLOAD_DIR, resolve_model_paths
+from .config import BASE_DIR, DEFAULT_MODEL_TYPE, MAX_UPLOAD_SIZE, MODEL_PATH, UPLOAD_DIR, resolve_model_paths
 from .inference import analyze_video, load_model
 
 app = FastAPI(title="Deepfake Detector API")
@@ -28,8 +30,37 @@ async def health():
     return {"status": "ok"}
 
 
+@app.get("/evaluation/metrics")
+async def evaluation_metrics():
+    """Return the preserved official evaluation artifacts for the UI."""
+    results_dir = BASE_DIR.parent / 'results'
+    metrics_path = results_dir / 'official_test_metrics.json'
+    roc_path = results_dir / 'official_test_roc.csv'
+    confusion_path = results_dir / 'official_test_confusion_matrix.csv'
+    if not metrics_path.exists():
+        raise HTTPException(status_code=404, detail='Official evaluation metrics are not available')
+    metrics = json.loads(metrics_path.read_text(encoding='utf-8'))
+    roc = []
+    if roc_path.exists():
+        lines = roc_path.read_text(encoding='utf-8').splitlines()
+        for line in lines[1:]:
+            false_positive_rate, true_positive_rate, threshold = line.split(',')
+            roc.append({
+                'false_positive_rate': float(false_positive_rate),
+                'true_positive_rate': float(true_positive_rate),
+                'threshold': float(threshold),
+            })
+    confusion = []
+    if confusion_path.exists():
+        lines = confusion_path.read_text(encoding='utf-8').splitlines()
+        for line in lines[1:]:
+            actual, predicted, count = line.split(',')
+            confusion.append({'actual': actual, 'predicted': predicted, 'count': int(count)})
+    return {'metrics': metrics, 'roc': roc, 'confusion_matrix': confusion}
+
+
 @app.get("/model/info")
-async def model_info(model_type: str = Query(default='legacy', description='Selected model contract: legacy or cached'), checkpoint_path: str | None = Query(default=None, description='Optional explicit checkpoint path')):
+async def model_info(model_type: str = Query(default=DEFAULT_MODEL_TYPE, description='Selected model contract: legacy or cached'), checkpoint_path: str | None = Query(default=None, description='Optional explicit checkpoint path')):
     try:
         chosen_type, resolved_path = resolve_model_paths(model_type=model_type, checkpoint_path=checkpoint_path)
         _, info = load_model(model_type=chosen_type, checkpoint_path=str(resolved_path))
@@ -99,7 +130,7 @@ def _resolve_device() -> str:
 
 
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...), model_type: str = Query(default='legacy', description='Selected model contract: legacy or cached'), checkpoint_path: str | None = Query(default=None, description='Optional explicit checkpoint path')):
+async def upload_file(file: UploadFile = File(...), model_type: str = Query(default=DEFAULT_MODEL_TYPE, description='Selected model contract: legacy or cached'), checkpoint_path: str | None = Query(default=None, description='Optional explicit checkpoint path')):
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
     if not (file.content_type and file.content_type.startswith('video')):

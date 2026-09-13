@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 import numpy as np
 import torch
 from torchvision import models
+from torchvision.models import EfficientNet_B4_Weights
 
 from .config import DEFAULT_SAMPLE_FRAMES, resolve_model_paths
 from .face_processor import FaceProcessor
@@ -73,19 +74,21 @@ def _prepare_cached_visual_features(video_path: str, device: str = 'cpu', n_fram
         if not crop:
             continue
         largest_crop = max(crop, key=lambda item: item.size[0] * item.size[1])
-        face_tensors.append(fp.preprocess_pil(largest_crop).to(device))
+        face_tensors.append(largest_crop)
 
     if not face_tensors:
         raise ValueError('NO_FACE_DETECTED')
 
-    batch = torch.stack(face_tensors[:n_frames])
+    weights = EfficientNet_B4_Weights.DEFAULT
+    transform = weights.transforms()
+    batch = torch.stack([transform(image) for image in face_tensors[:n_frames]]).to(device)
     if batch.shape[0] < n_frames:
         pad = n_frames - batch.shape[0]
         batch = torch.cat([batch, batch[-1:].repeat(pad, 1, 1, 1)], dim=0)
     if batch.shape[0] > n_frames:
         batch = batch[:n_frames]
 
-    backbone = models.efficientnet_b4(weights=None)
+    backbone = models.efficientnet_b4(weights=weights)
     backbone = backbone.to(device)
     backbone.eval()
     with torch.inference_mode():
