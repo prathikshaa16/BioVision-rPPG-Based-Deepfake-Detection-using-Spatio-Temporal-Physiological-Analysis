@@ -28,13 +28,13 @@ type Phase = 'idle' | 'uploading' | 'analyzing'
 const BACKEND_HINT = 'python -m uvicorn backend.app.main:app --port 8000'
 
 const STAGES = [
-  { icon: FaCloudUploadAlt, label: 'Uploading video' },
-  { icon: FaFilm, label: 'Extracting frames' },
-  { icon: FaFingerprint, label: 'Detecting faces' },
-  { icon: FaRobot, label: 'Running AI analysis' },
-  { icon: FaWaveSquare, label: 'Extracting physiological signal' },
-  { icon: FaLayerGroup, label: 'Aggregating results' },
-  { icon: FaFileAlt, label: 'Generating report' },
+  { icon: FaCloudUploadAlt, label: 'Uploading source video' },
+  { icon: FaFilm, label: 'Sampling 32 temporal observations' },
+  { icon: FaFingerprint, label: 'Preparing face regions' },
+  { icon: FaRobot, label: 'Encoding EfficientNet-B4 features' },
+  { icon: FaWaveSquare, label: 'Computing CHROM-rPPG pulse vector' },
+  { icon: FaLayerGroup, label: 'Fusing temporal and physiological evidence' },
+  { icon: FaFileAlt, label: 'Producing the forensic report' },
 ]
 
 export default function Analysis() {
@@ -115,7 +115,7 @@ export default function Analysis() {
     form.append('file', selectedFile)
 
     const xhr = new XMLHttpRequest()
-    xhr.open('POST', `${API_BASE}/upload`)
+    xhr.open('POST', `${API_BASE}/upload?model_type=cached`)
     xhr.timeout = UPLOAD_TIMEOUT_MS
     xhrRef.current = xhr
 
@@ -204,8 +204,7 @@ export default function Analysis() {
         <div>
           <h1 className="page-title">Video Analysis</h1>
           <p className="page-sub">
-            Upload a video and the BioVision forensic pipeline will analyze it for deepfake indicators using
-            face-level EfficientNet-B4 inference.
+            Upload a video to run the trained BioVision visual-temporal and physiological fusion pipeline.
           </p>
         </div>
         <span className="chip chip--info">
@@ -265,7 +264,7 @@ export default function Analysis() {
           >
             <div className="space-y-4">
               <div className="flex items-center justify-between gap-3 flex-wrap">
-                <span className="text-xs text-slate-500">Pipeline: 15 frames → MTCNN → EfficientNet-B4 + CHROM rPPG → quality-gated fusion</span>
+                <span className="text-xs text-slate-500">Pipeline: 32 observations → [32,1792] embeddings → [240] CHROM-rPPG → 320-D fusion head</span>
                 <span
                   className={`chip ${
                     backendOffline
@@ -364,7 +363,7 @@ export default function Analysis() {
                   <div className="space-y-2.5">
                     <div className="flex items-center gap-2.5 text-sm font-medium text-slate-200">
                       <FaHourglassHalf className="w-4 h-4 text-cyan-300 animate-pulse" />
-                      {phase === 'uploading' ? 'Preparing analysis pipeline…' : 'Running the detection pipeline — this can take 30–90 seconds on CPU (includes physiological signal extraction).'}
+                      {phase === 'uploading' ? 'Preparing the trained BioVision pipeline…' : 'Running visual-temporal encoding, CHROM-rPPG extraction, and learned fusion. This can take 30–90 seconds on CPU.'}
                     </div>
                     {phase === 'analyzing' && (
                       <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
@@ -392,7 +391,7 @@ export default function Analysis() {
                       )
                     })}
                     <p className="text-[11px] text-slate-500 pt-1">
-                      The backend does not report per-stage completion — the upload stage reflects real progress, the rest run server-side.
+                      Upload progress is measured live. Server-side stages are shown in execution order; the completed result arrives after fusion.
                     </p>
                   </div>
                 </div>
@@ -400,41 +399,41 @@ export default function Analysis() {
             </div>
           </Card>
 
-          <Card title="How It Works">
+          <Card title="What the trained model is doing">
             <div className="space-y-3">
               <div className="flex gap-4">
                 <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 text-[#04121d] flex items-center justify-center font-semibold text-sm">1</div>
                 <div>
-                  <p className="font-medium text-slate-100">Frame Extraction</p>
-                  <p className="text-slate-500 text-sm">Video is sampled at uniform intervals to select representative frames</p>
+                  <p className="font-medium text-slate-100">Temporal sampling</p>
+                  <p className="text-slate-500 text-sm">Thirty-two observations are selected across the video to preserve temporal context.</p>
                 </div>
               </div>
               <div className="flex gap-4">
                 <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 text-[#04121d] flex items-center justify-center font-semibold text-sm">2</div>
                 <div>
                   <p className="font-medium text-slate-100">Face Detection</p>
-                  <p className="text-slate-500 text-sm">MTCNN detects faces in each frame and extracts the largest face region</p>
+                  <p className="text-slate-500 text-sm">The largest visible face region is prepared for the trained EfficientNet-B4 feature encoder.</p>
                 </div>
               </div>
               <div className="flex gap-4">
                 <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 text-[#04121d] flex items-center justify-center font-semibold text-sm">3</div>
                 <div>
                   <p className="font-medium text-slate-100">AI Analysis</p>
-                  <p className="text-slate-500 text-sm">EfficientNet-B4 model analyzes each face for deepfake indicators</p>
+                  <p className="text-slate-500 text-sm">Each observation becomes a 1,792-dimensional embedding, then a 2-layer LSTM summarizes temporal consistency.</p>
                 </div>
               </div>
               <div className="flex gap-4">
                 <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 text-[#04121d] flex items-center justify-center font-semibold text-sm">4</div>
                 <div>
                   <p className="font-medium text-slate-100">Physiological Signal (rPPG)</p>
-                  <p className="text-slate-500 text-sm">CHROM pulse extracted from forehead + cheek regions — quality-gated evidence contributes up to 20%</p>
+                  <p className="text-slate-500 text-sm">CHROM extracts a physiological pulse vector from forehead and cheek regions and encodes it through a 64-dimensional branch.</p>
                 </div>
               </div>
               <div className="flex gap-4">
                 <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 text-[#04121d] flex items-center justify-center font-semibold text-sm">5</div>
                 <div>
                   <p className="font-medium text-slate-100">Results</p>
-                  <p className="text-slate-500 text-sm">Per-frame predictions are aggregated to generate a final classification</p>
+                  <p className="text-slate-500 text-sm">The 256-dimensional temporal branch and 64-dimensional rPPG branch feed the trained 320-dimensional fusion classifier.</p>
                 </div>
               </div>
             </div>

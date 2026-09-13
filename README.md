@@ -1,5 +1,9 @@
 # BioVision- A rPPG Based Deepfake Detection using Spatio Temporal and Physiological Signal Analysis
 
+> **Active scope:** Celeb-DF v2 only. DFDC and the pending large dataset are
+> intentionally deferred and must not be extracted, merged, or used for model
+> selection until their upload and provenance are confirmed.
+
 BioVision combines spatial forensic cues from an EfficientNet-B4 face classifier
 with temporal physiological evidence from CHROM remote photoplethysmography
 (rPPG). The existing visual checkpoint is preserved, and a transparent,
@@ -65,10 +69,10 @@ test evaluation reported ROC-AUC `0.717184`, accuracy `0.741313`, precision
 
 These values are historical artifacts from the Kaggle run, not targets to
 optimize against. Preserve the notebook, checkpoint, training log, raw
-predictions, and evaluation files together. The second dataset currently being
-uploaded to Kaggle must receive its own manifest, provenance, split audit, and
-experiment directory; do not merge it into this baseline or change a result
-until the new data has passed the same checks.
+predictions, and evaluation files together. The pending dataset currently being
+uploaded to Kaggle is out of scope for the active Celeb-DF experiment; do not
+merge it into this baseline or change a result until its upload, provenance,
+manifest, and split audit have been confirmed.
 
 Before connecting the trained model to the webpage, run
 `backend/scripts/prepare_kaggle_release.py` inside the Kaggle notebook after
@@ -103,12 +107,12 @@ predictions and metrics are preserved.
 ## Training the full architecture
 
 The trainable implementation is in `backend/app/multimodal_model.py`, with a
-manifest-based trainer in `backend/scripts/train_multimodal.py`. Keep the
-official test manifest out of training and model selection. Each JSONL record
-must reference precomputed arrays for all required modalities:
+manifest-based trainer in `backend/scripts/train_multimodal.py`. For the active
+Celeb-DF work, keep the official test manifest out of training and model
+selection. Each JSONL record must reference precomputed arrays for all required
+modalities:
 `visual [T,3,224,224]`, `rppg [N]`, `mfcc [T,40]`, and `mouth [T,40]`, plus a
-binary `label`. Train only after producing video-disjoint Celeb-DF v2 and
-separate DFDC manifests:
+binary `label`. Train only after producing video-disjoint Celeb-DF v2 manifests:
 
 ```bash
 python backend/scripts/train_multimodal.py --train-manifest data/celebdf_train.jsonl --val-manifest data/celebdf_val.jsonl --epochs 3 --output results/pilot/biovision_visual_rppg.pt

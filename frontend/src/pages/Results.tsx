@@ -216,7 +216,7 @@ function FaceVisualization({ result }: { result: AnalysisResult }) {
   if (rows.length === 0) {
     return (
       <div className="text-center py-8 text-slate-500 text-sm">
-        No per-frame breakdown was returned for this analysis.
+        This trained fusion model returns a video-level embedding verdict; detailed rPPG and fusion evidence is shown below.
       </div>
     )
   }
@@ -257,7 +257,7 @@ function FaceVisualization({ result }: { result: AnalysisResult }) {
         })}
       </div>
       <p className="text-[11px] text-slate-600">
-        Real per-frame output from the pipeline. Face bounding-box overlays will render here automatically if the
+        Real visual evidence returned by the pipeline. Face-region overlays will render here automatically if the
         backend ever includes frame previews ({'frame_overlays'}).
       </p>
     </div>
@@ -353,7 +353,7 @@ function NoFaceView({ result }: { result: AnalysisResult }) {
 
       <Card
         title="Frame Analysis"
-        subtitle="Actual per-frame output — face detection status for every sampled frame"
+        subtitle="Actual visual sampling output — face preparation status for every temporal observation"
       >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -380,12 +380,12 @@ function NoFaceView({ result }: { result: AnalysisResult }) {
             </tbody>
           </table>
           <p className="text-[11px] text-slate-600 mt-3">
-            The face detector (MTCNN) reported no usable face in any sampled frame, so no deepfake inference was run.
+            No usable face region was recovered for the required temporal observations, so the trained fusion model did not run.
           </p>
         </div>
       </Card>
 
-      <Card title="Sampled Frames" subtitle="Real per-frame pipeline output — no faces detected">
+      <Card title="Temporal Observations" subtitle="Real visual pipeline output — no face regions detected">
         <FaceVisualization result={result} />
       </Card>
 
@@ -785,7 +785,7 @@ export default function Results() {
       <Card title="Report">
         <p className="text-sm text-slate-500 leading-relaxed mb-4">
           Download a PDF report of this analysis. The report includes the verdict, confidence, real/fake probabilities,
-          per-frame analysis, the rPPG physiological findings, and the model explanation.
+          the visual-temporal fusion verdict, rPPG physiological findings, and the model explanation.
         </p>
         <button onClick={() => downloadReportPdf(result)} className="btn btn-primary">
           <FaFilePdf className="w-4 h-4" />
@@ -815,7 +815,7 @@ export default function Results() {
 
       <Card
         title="Frame-by-Frame Analysis"
-        subtitle={`Fake probability per sampled frame (${chartData.length} frames) · dashed lines mark REAL (≤40%) and FAKE (≥60%) thresholds`}
+        subtitle={`Visual probability returned for the temporal sequence (${chartData.length} observations) · dashed lines mark REAL (≤40%) and FAKE (≥60%) thresholds`}
       >
         <SimpleLineChart
           data={chartData}
@@ -882,13 +882,13 @@ export default function Results() {
               </tbody>
             </table>
             <p className="text-[11px] text-slate-600 mt-3">
-              Per-frame classification uses the same thresholds as the backend verdict: ≤40% REAL, ≥60% FAKE.
+              Probability classification uses the same thresholds as the trained fusion verdict: ≤40% REAL, ≥60% FAKE.
             </p>
           </div>
         )}
       </Card>
 
-      <Card title="Sampled Frames" subtitle="Real per-frame pipeline output — face detection and fake probability per frame">
+      <Card title="Temporal Observations" subtitle="Real visual pipeline output — face regions and returned probabilities">
         <FaceVisualization result={result} />
       </Card>
 
@@ -1019,7 +1019,7 @@ export default function Results() {
         </Card>
       </div>
 
-      <Card title="Explanation" subtitle="Generated from the model's per-frame predictions">
+      <Card title="Explanation" subtitle="Generated from the trained visual-temporal and physiological evidence">
         <p className="text-sm text-slate-400 leading-relaxed">{buildExplanation(result)}</p>
       </Card>
 

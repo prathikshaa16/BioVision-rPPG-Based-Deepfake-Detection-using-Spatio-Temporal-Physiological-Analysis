@@ -116,16 +116,16 @@ export default function ModelInfo() {
             <div className="space-y-4">
               <div>
                 <p className="font-medium text-slate-100 mb-2">Base Model</p>
-                <p className="text-slate-500">EfficientNet-B4 spatial encoder + CHROM temporal rPPG analysis</p>
+                <p className="text-slate-500">Cached BioVision fusion: 32 EfficientNet-B4 embeddings + CHROM-rPPG + learned temporal classifier</p>
               </div>
               <div>
                 <p className="font-medium text-slate-100 mb-2">Classification Head</p>
                 <div className="rounded-xl bg-black/40 border border-slate-800 p-4 text-sm font-mono text-cyan-200/90 space-y-1">
-                  <div>Dropout(0.4)</div>
-                  <div>Linear(1792, 256)</div>
-                  <div>ReLU</div>
-                  <div>Dropout(0.2)</div>
-                  <div>Linear(256, 1)</div>
+                  <div>Visual sequence [32, 1792] → 2-layer LSTM → 256-D</div>
+                  <div>rPPG vector [240] → Conv1D → 64-D</div>
+                  <div>LayerNorm(256) + LayerNorm(64) → 320-D fusion</div>
+                  <div>Linear(320, 256) → ReLU → Dropout(0.3)</div>
+                  <div>Linear(256, 64) → ReLU → Dropout(0.2) → Linear(64, 1)</div>
                 </div>
               </div>
               <div>
@@ -191,26 +191,26 @@ export default function ModelInfo() {
             <div className="space-y-4 text-sm text-slate-500">
               <div>
                 <p className="font-semibold text-slate-200 mb-1 flex items-center gap-2"><FaLayerGroup className="w-4 h-4 text-cyan-400" />Input Processing</p>
-                <p>Video → OpenCV frame extraction → MTCNN face detection → Crop (224×224) → ImageNet normalization</p>
+                <p>Video → uniform 32-observation sampling → largest-face crop → ImageNet preprocessing → EfficientNet-B4 embeddings [32,1792]</p>
               </div>
               <div>
                 <p className="font-semibold text-slate-200 mb-1">Model Inference</p>
-                <p>Per-frame batch inference → sigmoid activation → probability [0, 1]</p>
+                <p>Embedding sequence → 2-layer LSTM temporal summary → 256-D visual representation</p>
               </div>
               <div>
                 <p className="font-semibold text-slate-200 mb-1">Physiological Signal (rPPG)</p>
-                <p>Forehead + cheek ROIs → CHROM projection → detrend → 0.8–3.0 Hz bandpass → FFT heart-rate estimate → quality-gated fusion evidence.</p>
+                <p>Forehead + cheek ROIs → CHROM projection → detrend → 0.8–3.0 Hz bandpass → fixed [240] physiological vector → 64-D representation.</p>
               </div>
               <div>
                 <p className="font-semibold text-slate-200 mb-1">Aggregation</p>
-                <p>Mean visual probability + rPPG anomaly score (80/20 when available) → mean, median, std deviation → classification decision</p>
+                <p>Concatenate 256-D visual-temporal and 64-D rPPG representations → trained 320-D fusion classifier → fake logit → sigmoid probability.</p>
               </div>
               <div>
                 <p className="font-semibold text-slate-200 mb-1">Classification</p>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>REAL: mean ≤ 0.40</li>
-                  <li>FAKE: mean ≥ 0.60</li>
-                  <li>UNCERTAIN: 0.40 &lt; mean &lt; 0.60</li>
+                  <li>REAL: fake probability ≤ 0.40</li>
+                  <li>FAKE: fake probability ≥ 0.60</li>
+                  <li>UNCERTAIN: 0.40 &lt; fake probability &lt; 0.60</li>
                 </ul>
               </div>
             </div>
@@ -220,7 +220,7 @@ export default function ModelInfo() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="font-semibold text-slate-200 mb-2">Accuracy Metrics</p>
-                <p className="text-slate-500">Not evaluated on public test set. Results depend on video quality, resolution, and subject matter.</p>
+                <p className="text-slate-500">Official Celeb-DF v2 test metrics are available on the Metrics page. Results still depend on video quality, resolution, and subject matter.</p>
               </div>
               <div>
                 <p className="font-semibold text-slate-200 mb-2">Processing Speed</p>

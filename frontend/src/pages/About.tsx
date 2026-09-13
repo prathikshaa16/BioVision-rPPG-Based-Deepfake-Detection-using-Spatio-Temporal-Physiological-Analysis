@@ -29,10 +29,10 @@ export default function About() {
           </div>
         </div>
         <p className="text-sm text-slate-400 leading-relaxed mt-5">
-          {APP_NAME} is an AI deepfake detection platform that helps you verify whether a video is real. It samples
-          video frames, detects faces with MTCNN, scores each face with an EfficientNet-B4 forensic classifier, and
-          extracts CHROM rPPG from forehead and cheek regions. Quality-gated late fusion combines the two evidence
-          channels into a transparent forensic report.
+          {APP_NAME} is an AI deepfake detection platform that helps you verify whether a video is real. The trained
+          pipeline encodes 32 face observations with EfficientNet-B4, summarizes their temporal structure with an
+          LSTM, extracts CHROM rPPG from forehead and cheek regions, and combines both representations in a learned
+          320-dimensional fusion classifier.
         </p>
       </div>
 
@@ -40,13 +40,13 @@ export default function About() {
         <Card title="Our Mission">
           <p className="text-sm text-slate-500 leading-relaxed">
             Make reliable deepfake verification accessible. We believe detection must be transparent — every verdict
-            is backed by per-frame probabilities and a readable explanation.
+            is backed by the model probability, temporal consistency, physiological signal quality, and a readable explanation.
           </p>
         </Card>
         <Card title="Our Approach">
           <p className="text-sm text-slate-500 leading-relaxed">
-            Frame sampling, face-level analysis, physiological signal extraction, and quality-gated late fusion. No
-            black boxes: the model, weights, thresholds, and pipeline are documented in the Model page.
+            Temporal face embeddings, CHROM physiological signal extraction, and learned visual+rPPG fusion. The
+            model, checkpoint, thresholds, and pipeline are documented in the Model page.
           </p>
         </Card>
         <Card title="Our Commitment">
@@ -60,11 +60,11 @@ export default function About() {
       <Card title="How the pipeline works">
         <ul className="space-y-3">
           {[
-            { icon: FaEye, t: 'Frame extraction', d: '15 uniform samples drawn across the video.' },
-            { icon: FaFingerprint, t: 'Face detection', d: 'MTCNN locates faces and crops the largest region per frame.' },
-            { icon: FaMicrochip, t: 'Model inference', d: 'EfficientNet-B4 scores each face crop as a fake probability.' },
-            { icon: FaChartLine, t: 'Physiological analysis', d: 'CHROM extracts a temporal pulse signal and estimates its quality.' },
-            { icon: FaShieldAlt, t: 'Evidence fusion', d: 'Visual and physiological evidence combine with a transparent 80/20 cap.' },
+            { icon: FaEye, t: 'Temporal sampling', d: 'Thirty-two observations are selected across the video.' },
+            { icon: FaFingerprint, t: 'Face preparation', d: 'The largest visible face region is prepared for EfficientNet-B4.' },
+            { icon: FaMicrochip, t: 'Visual-temporal encoding', d: 'EfficientNet-B4 embeddings feed a 2-layer LSTM and produce a 256-D representation.' },
+            { icon: FaChartLine, t: 'Physiological encoding', d: 'CHROM produces a fixed 240-sample pulse vector and a 64-D representation.' },
+            { icon: FaShieldAlt, t: 'Learned fusion', d: 'The 256-D and 64-D branches combine in the trained 320-D classifier.' },
           ].map((s) => (
             <li key={s.t} className="flex gap-4">
               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-cyan-400/15 to-blue-500/15 border border-cyan-400/25 flex items-center justify-center flex-shrink-0">

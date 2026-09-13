@@ -150,7 +150,7 @@ function ForensicVisual() {
             </div>
           </div>
           <div className="absolute bottom-3 left-4 text-[10px] text-slate-500 font-mono">
-            frame_04 / 15 · sampled
+            observation_04 / 32 · sampled
           </div>
         </div>
 
@@ -162,22 +162,22 @@ function ForensicVisual() {
             />
           ))}
         </div>
-        <div className="text-[10px] text-slate-500 mt-2 text-center">15 uniform samples → MTCNN → EfficientNet-B4</div>
+        <div className="text-[10px] text-slate-500 mt-2 text-center">32 observations → EfficientNet-B4 embeddings → LSTM + CHROM-rPPG fusion</div>
 
         <div className="mt-4 grid grid-cols-3 gap-3 text-center">
           <div className="glass-inset p-3">
             <FaMicrochip className="w-4 h-4 text-cyan-400 mx-auto mb-1.5" />
             <div className="text-[11px] text-slate-300 font-medium">EfficientNet-B4</div>
-            <div className="text-[10px] text-slate-500">per-face inference</div>
+            <div className="text-[10px] text-slate-500">[32,1792] embeddings</div>
           </div>
           <div className="glass-inset p-3">
             <FaFingerprint className="w-4 h-4 text-blue-400 mx-auto mb-1.5" />
-            <div className="text-[11px] text-slate-300 font-medium">MTCNN</div>
-            <div className="text-[10px] text-slate-500">face detection</div>
+            <div className="text-[11px] text-slate-300 font-medium">CHROM-rPPG</div>
+            <div className="text-[10px] text-slate-500">[240] pulse vector</div>
           </div>
           <div className="glass-inset p-3">
             <FaChartLine className="w-4 h-4 text-emerald-400 mx-auto mb-1.5" />
-            <div className="text-[11px] text-slate-300 font-medium">Aggregation</div>
+            <div className="text-[11px] text-slate-300 font-medium">320-D fusion</div>
             <div className="text-[10px] text-slate-500">mean · median · std</div>
           </div>
         </div>
@@ -281,34 +281,34 @@ function SectionHeading({ eyebrow, title, sub }: { eyebrow: string; title: React
 }
 
 const CAPABILITIES = [
-  { icon: FaFilm, value: '15 frames', label: 'Uniformly sampled per video for representative coverage' },
-  { icon: FaFingerprint, value: 'Face-level', label: 'MTCNN isolates faces to analyze identity regions' },
-  { icon: FaChartLine, value: 'Per-frame', label: 'Sigmoid probability produced for every sampled frame' },
+  { icon: FaFilm, value: '32 observations', label: 'Uniform temporal coverage for the visual sequence' },
+  { icon: FaFingerprint, value: '1792-D', label: 'EfficientNet-B4 embedding for each prepared face observation' },
+  { icon: FaChartLine, value: '320-D fusion', label: 'LSTM visual context combined with CHROM-rPPG evidence' },
   { icon: FaShieldAlt, value: '3 verdicts', label: 'REAL · FAKE · UNCERTAIN with transparent thresholds' },
 ]
 
 const HOW_IT_WORKS = [
   { icon: FaVideo, step: '01', title: 'Upload video', desc: 'Drop an MP4, MOV, MKV, AVI, or WebM file — up to 500 MB.' },
-  { icon: FaFilm, step: '02', title: 'Extract frames', desc: 'The pipeline samples 15 frames at uniform intervals.' },
-  { icon: FaFingerprint, step: '03', title: 'Detect faces', desc: 'MTCNN locates faces and crops the largest region per frame.' },
-  { icon: FaRobot, step: '04', title: 'EfficientNet-B4 analysis', desc: 'Each face crop runs through the forensics model.' },
-  { icon: FaLayerGroup, step: '05', title: 'Aggregate predictions', desc: 'Mean, median, and std combine the per-frame signals.' },
+  { icon: FaFilm, step: '02', title: 'Sample the sequence', desc: 'Thirty-two temporal observations are selected across the video.' },
+  { icon: FaFingerprint, step: '03', title: 'Prepare face regions', desc: 'The largest visible face region is normalized for the feature encoder.' },
+  { icon: FaRobot, step: '04', title: 'Encode visual context', desc: 'EfficientNet-B4 embeddings feed a 2-layer LSTM.' },
+  { icon: FaLayerGroup, step: '05', title: 'Fuse visual + rPPG', desc: 'The 256-D temporal and 64-D physiological branches feed the learned fusion head.' },
   { icon: FaFileAlt, step: '06', title: 'Generate forensic report', desc: 'A transparent verdict, confidence, and frame chart.' },
 ]
 
 const FEATURES = [
-  { icon: FaFingerprint, title: 'Face-level analysis', desc: 'Detection runs on detected face regions, not raw pixels, matching how manipulation is introduced.' },
-  { icon: FaChartLine, title: 'Frame-level probabilities', desc: 'Every sampled frame yields an explicit fake probability you can inspect in the report.' },
+  { icon: FaFingerprint, title: 'Face-region embeddings', desc: 'The model encodes prepared face observations into a temporal visual sequence.' },
+  { icon: FaChartLine, title: 'Physiological evidence', desc: 'The CHROM-rPPG signal is encoded and shown with quality and spectrum charts.' },
   { icon: FaShieldAlt, title: 'Confidence scoring', desc: 'A normalized confidence expresses how far predictions sit from the decision boundary.' },
-  { icon: FaHourglassHalf, title: 'Temporal consistency', desc: 'Cross-frame std deviation surfaces whether evidence is stable or frame-to-frame disagreement exists.' },
+  { icon: FaHourglassHalf, title: 'Temporal consistency', desc: 'The LSTM summarizes how visual evidence evolves across the video.' },
   { icon: FaDatabase, title: 'Detection history', desc: 'Every real result is stored locally and synchronized with the server when it is online.' },
-  { icon: FaEye, title: 'Forensic explanation', desc: 'Plain-language reasoning generated from the actual per-frame model output.' },
+  { icon: FaEye, title: 'Forensic explanation', desc: 'The report explains the visual, temporal, and physiological evidence actually returned.' },
 ]
 
 const TOPICS = [
   { icon: FaBookOpen, title: 'How Deepfakes Work', desc: 'GANs, autoencoders, and diffusion models that synthesize and swap faces.' },
   { icon: FaUsers, title: 'Face Manipulation', desc: 'How identity is replaced or reenacted and where artifacts tend to appear.' },
-  { icon: FaFilm, title: 'Frame-Level Detection', desc: 'Why sampling frames and analyzing faces per-frame is a robust strategy.' },
+  { icon: FaFilm, title: 'Visual-Temporal Detection', desc: 'How EfficientNet-B4 embeddings and an LSTM preserve evidence across the video.' },
   { icon: FaChartLine, title: 'Understanding Confidence', desc: 'What a confidence score means and how to read it responsibly.' },
   { icon: FaRobot, title: 'How AI Detects Manipulation', desc: 'How EfficientNet-B4 learns to flag forensic inconsistencies.' },
 ]
@@ -358,7 +358,7 @@ function Footer() {
             </div>
           </div>
           <p className="text-xs text-slate-500 leading-relaxed max-w-xs">
-            AI-powered deepfake detection and video forensics built on EfficientNet-B4 and the MTCNN face detector.
+            AI-powered deepfake detection and video forensics built on EfficientNet-B4, LSTM temporal context, and CHROM-rPPG.
           </p>
         </div>
         <div>

@@ -45,13 +45,13 @@ const TOPICS: Topic[] = [
   },
   {
     icon: FaFilm,
-    title: 'Frame-Level Analysis',
-    desc: 'Why sampling frames and analyzing each one individually is a robust detection strategy.',
+    title: 'Visual-Temporal Analysis',
+    desc: 'Why a sequence of EfficientNet-B4 embeddings and an LSTM is useful for video forensics.',
     points: [
-      'Manipulation artifacts are easier to isolate at the frame level than in a whole video.',
-      'Uniform sampling ensures coverage across the full temporal range of the clip.',
-      'Per-frame probabilities let analysts see when a video dips in and out of suspicious regions.',
-      'BioVision samples 15 uniform frames and reports each frame\u2019s prediction.',
+      'A sequence preserves changes in face appearance and motion across the clip.',
+      'Uniform sampling provides coverage across the full temporal range of the video.',
+      'The LSTM converts the 32 embedding sequence into a 256-dimensional temporal representation.',
+      'BioVision combines this visual context with a 64-dimensional CHROM-rPPG representation.',
     ],
   },
   {
@@ -82,9 +82,9 @@ const TOPICS: Topic[] = [
     desc: 'How EfficientNet-B4 learns forensic indicators and why the head architecture matters.',
     points: [
       'EfficientNet-B4 is a scalable convolutional backbone pretrained on ImageNet.',
-      'A single-neuron sigmoid head maps features to a fake probability in [0, 1].',
-      'The classifier head is Dropout(0.4) → Linear(1792,256) → ReLU → Dropout(0.2) → Linear(256,1).',
-      'Mean, median, and std deviation aggregate per-frame evidence into a verdict.',
+      'The visual-temporal branch produces 256 dimensions and the rPPG branch produces 64 dimensions.',
+      'The trained fusion head maps the combined 320-dimensional representation to a fake probability in [0, 1].',
+      'The result page exposes the probability, confidence, temporal evidence, and physiological charts.',
     ],
   },
 ]

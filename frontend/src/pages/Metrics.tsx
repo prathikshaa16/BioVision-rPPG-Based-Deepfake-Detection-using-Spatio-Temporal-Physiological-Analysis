@@ -2,7 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react'
 import Card from '../components/Card'
 import { API_BASE, getHistory } from '../lib/api'
 import { formatDuration, formatPercent } from '../lib/format'
-import { FaChartLine, FaFlask, FaExclamationTriangle, FaServer, FaDatabase } from 'react-icons/fa'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import type { EvaluationResponse } from '../lib/types'
+import { FaChartLine, FaExclamationTriangle, FaServer, FaDatabase } from 'react-icons/fa'
 
 interface LiveStats {
   total_analyses: number
@@ -21,14 +23,19 @@ export default function Metrics() {
   const [live, setLive] = useState<LiveStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [backendUp, setBackendUp] = useState<boolean | null>(null)
+  const [evaluation, setEvaluation] = useState<EvaluationResponse | null>(null)
 
   useEffect(() => {
     let cancelled = false
     const load = async () => {
       try {
-        const res = await fetch(`${API_BASE}/dashboard/stats`)
+        const [res, evaluationRes] = await Promise.all([
+          fetch(`${API_BASE}/dashboard/stats`),
+          fetch(`${API_BASE}/evaluation/metrics`),
+        ])
         if (res.ok && !cancelled) {
           setLive(await res.json())
+          if (evaluationRes.ok) setEvaluation(await evaluationRes.json())
           setBackendUp(true)
         } else if (!cancelled) {
           setBackendUp(false)
@@ -185,23 +192,74 @@ export default function Metrics() {
         </div>
       )}
 
-      <Card title="Model Benchmarks" subtitle="Not fabricated — awaiting evaluation on a public labeled test set">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {['Accuracy', 'Precision', 'Recall', 'F1', 'ROC-AUC', 'False Pos. Rate'].map((m) => (
-            <div key={m} className="glass-inset p-4">
-              <div className="flex items-center gap-2 text-sm text-slate-400">
-                <FaFlask className="w-4 h-4 text-slate-500" />
-                {m}
-              </div>
-              <div className="text-sm text-slate-600 mt-2">Awaiting benchmark</div>
+      {evaluation && (
+        <div className="space-y-6">
+          <Card title="Official Evaluation" subtitle={`${evaluation.metrics.dataset} · preserved held-out test result`}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                ['Accuracy', evaluation.metrics.accuracy, 'text-cyan-300'],
+                ['Precision', evaluation.metrics.precision, 'text-emerald-300'],
+                ['Recall / Sensitivity', evaluation.metrics.recall_sensitivity, 'text-rose-300'],
+                ['Specificity', evaluation.metrics.specificity, 'text-amber-300'],
+                ['F1 score', evaluation.metrics.f1, 'text-blue-300'],
+                ['Balanced accuracy', evaluation.metrics.balanced_accuracy, 'text-violet-300'],
+                ['ROC-AUC', evaluation.metrics.roc_auc, 'text-cyan-300'],
+                ['Validation AUC', evaluation.metrics.validation_auc, 'text-slate-200'],
+              ].map(([label, value, color]) => (
+                <div key={String(label)} className="glass-inset p-4">
+                  <div className="text-xs uppercase tracking-wider text-slate-500">{label}</div>
+                  <div className={`text-3xl font-bold mt-2 ${color}`}>{formatPercent(Number(value))}</div>
+                </div>
+              ))}
             </div>
-          ))}
+            <div className="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              {[
+                ['True positives', evaluation.metrics.TP],
+                ['True negatives', evaluation.metrics.TN],
+                ['False positives', evaluation.metrics.FP],
+                ['False negatives', evaluation.metrics.FN],
+              ].map(([label, value]) => (
+                <div key={String(label)} className="flex items-center justify-between border-t border-slate-800/70 pt-3">
+                  <span className="text-slate-500">{label}</span>
+                  <span className="font-semibold text-slate-200">{value}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-slate-500 mt-5">Official test threshold: {evaluation.metrics.selected_threshold.toFixed(3)} · {evaluation.metrics.test_samples} videos · no test-time tuning.</p>
+          </Card>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card title="ROC Curve" subtitle="Saved official test predictions">
+              <div className="h-64">
+                <ResponsiveContainer>
+                  <LineChart data={evaluation.roc} margin={{ top: 10, right: 12, left: 0, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.12)" />
+                    <XAxis dataKey="false_positive_rate" type="number" domain={[0, 1]} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(value) => `${Math.round(value * 100)}%`} />
+                    <YAxis dataKey="true_positive_rate" type="number" domain={[0, 1]} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(value) => `${Math.round(value * 100)}%`} />
+                    <Tooltip formatter={(value) => typeof value === 'number' ? `${(value * 100).toFixed(1)}%` : '—'} />
+                    <Line type="monotone" dataKey="true_positive_rate" stroke="#22d3ee" strokeWidth={2.5} dot={false} isAnimationActive={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+            <Card title="Confusion Matrix" subtitle="Official test counts">
+              <div className="grid grid-cols-2 gap-3 h-64">
+                {[
+                  ['REAL → REAL', evaluation.metrics.TN, 'bg-emerald-400/15 border-emerald-400/25 text-emerald-200'],
+                  ['REAL → FAKE', evaluation.metrics.FP, 'bg-rose-400/15 border-rose-400/25 text-rose-200'],
+                  ['FAKE → REAL', evaluation.metrics.FN, 'bg-amber-400/15 border-amber-400/25 text-amber-200'],
+                  ['FAKE → FAKE', evaluation.metrics.TP, 'bg-cyan-400/15 border-cyan-400/25 text-cyan-200'],
+                ].map(([label, value, tone]) => (
+                  <div key={String(label)} className={`rounded-xl border flex flex-col items-center justify-center ${tone}`}>
+                    <span className="text-xs uppercase tracking-wider opacity-80">{label}</span>
+                    <span className="text-4xl font-bold mt-2">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
         </div>
-        <p className="text-xs text-slate-600 mt-4">
-          Confusion against ground truth requires a labeled evaluation dataset and is intentionally left blank rather
-          than invented.
-        </p>
-      </Card>
+      )}
 
       <div className="glass-card p-5 flex items-start gap-3">
         <FaExclamationTriangle className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" />
