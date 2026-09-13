@@ -1,5 +1,7 @@
 import os
+import json
 import uuid
+from pathlib import Path
 from typing import Dict, List
 
 import aiofiles
@@ -21,11 +23,21 @@ app.add_middleware(
 )
 
 _ANALYSES: Dict[str, Dict] = {}
+_BENCHMARK_PATH = Path(__file__).resolve().parents[2] / 'results' / 'official_test_metrics.json'
 
 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/evaluation/metrics")
+async def evaluation_metrics():
+    """Return the latest checked-in labeled benchmark, if available."""
+    if not _BENCHMARK_PATH.exists():
+        raise HTTPException(status_code=404, detail='No benchmark metrics are available')
+    with _BENCHMARK_PATH.open('r', encoding='utf-8') as stream:
+        return json.load(stream)
 
 
 @app.get("/model/info")

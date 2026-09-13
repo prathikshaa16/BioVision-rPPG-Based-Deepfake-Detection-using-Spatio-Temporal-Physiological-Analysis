@@ -16,9 +16,24 @@ interface LiveStats {
   source: string
 }
 
+interface BenchmarkMetrics {
+  dataset: string
+  test_samples: number
+  accuracy: number
+  precision: number
+  recall_sensitivity: number
+  specificity: number
+  f1: number
+  balanced_accuracy: number
+  roc_auc: number
+  selected_threshold: number
+  threshold_method: string
+}
+
 export default function Metrics() {
   const history = useMemo(() => getHistory(), [])
   const [live, setLive] = useState<LiveStats | null>(null)
+  const [benchmark, setBenchmark] = useState<BenchmarkMetrics | null>(null)
   const [loading, setLoading] = useState(true)
   const [backendUp, setBackendUp] = useState<boolean | null>(null)
 
@@ -26,13 +41,17 @@ export default function Metrics() {
     let cancelled = false
     const load = async () => {
       try {
-        const res = await fetch(`${API_BASE}/dashboard/stats`)
+        const [res, benchmarkRes] = await Promise.all([
+          fetch(`${API_BASE}/dashboard/stats`),
+          fetch(`${API_BASE}/evaluation/metrics`),
+        ])
         if (res.ok && !cancelled) {
           setLive(await res.json())
           setBackendUp(true)
         } else if (!cancelled) {
           setBackendUp(false)
         }
+        if (benchmarkRes.ok && !cancelled) setBenchmark(await benchmarkRes.json())
       } catch {
         if (!cancelled) setBackendUp(false)
       } finally {
@@ -185,22 +204,32 @@ export default function Metrics() {
         </div>
       )}
 
-      <Card title="Model Benchmarks" subtitle="Not fabricated — awaiting evaluation on a public labeled test set">
+      <Card title="Verified Model Benchmark" subtitle={benchmark ? `${benchmark.dataset} · ${benchmark.test_samples} held-out videos` : 'No checked-in benchmark is available'}>
+        {benchmark ? (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {['Accuracy', 'Precision', 'Recall', 'F1', 'ROC-AUC', 'False Pos. Rate'].map((m) => (
+          {[
+            ['Accuracy', benchmark.accuracy],
+            ['Precision', benchmark.precision],
+            ['Recall', benchmark.recall_sensitivity],
+            ['Specificity', benchmark.specificity],
+            ['F1', benchmark.f1],
+            ['ROC-AUC', benchmark.roc_auc],
+          ].map(([m, value]) => (
             <div key={m} className="glass-inset p-4">
               <div className="flex items-center gap-2 text-sm text-slate-400">
                 <FaFlask className="w-4 h-4 text-slate-500" />
                 {m}
               </div>
-              <div className="text-sm text-slate-600 mt-2">Awaiting benchmark</div>
+              <div className="text-2xl font-bold text-slate-100 mt-2">{formatPercent(Number(value))}</div>
             </div>
           ))}
         </div>
         <p className="text-xs text-slate-600 mt-4">
-          Confusion against ground truth requires a labeled evaluation dataset and is intentionally left blank rather
-          than invented.
+          Threshold: {benchmark.selected_threshold.toFixed(4)} selected with {benchmark.threshold_method}. These are measured results, not a target or guarantee.
         </p>
+        </>
+        ) : <p className="text-sm text-slate-600">Awaiting a labeled benchmark export.</p>}
       </Card>
 
       <div className="glass-card p-5 flex items-start gap-3">
