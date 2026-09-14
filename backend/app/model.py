@@ -28,7 +28,7 @@ def load_checkpoint_into_model(model: torch.nn.Module, checkpoint_path: str, dev
     if not os.path.exists(checkpoint_path):
         raise FileNotFoundError(f"Checkpoint not found at {checkpoint_path}")
 
-    state = torch.load(checkpoint_path, map_location=device)
+    state = torch.load(checkpoint_path, map_location=device, weights_only=False)
 
     # The checkpoint is a plain OrderedDict state_dict, but allow the common nested form too.
     if isinstance(state, dict) and 'model_state_dict' in state:
@@ -46,7 +46,12 @@ def load_checkpoint_into_model(model: torch.nn.Module, checkpoint_path: str, dev
 
     try:
         model.load_state_dict(new_state, strict=True)
-        return model, {'missing_keys': [], 'unexpected_keys': []}
+        info = {'missing_keys': [], 'unexpected_keys': []}
+        if isinstance(state, dict):
+            for meta_k in ('optimal_threshold', 'best_bal_acc', 'best_val_auc', 'protocol', 'epoch'):
+                if meta_k in state:
+                    info[meta_k] = state[meta_k]
+        return model, info
     except RuntimeError as exc:
         message = str(exc)
         # Show the exact mismatch without forcing a partial load.
