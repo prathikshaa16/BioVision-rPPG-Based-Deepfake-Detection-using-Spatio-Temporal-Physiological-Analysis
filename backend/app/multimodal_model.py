@@ -323,6 +323,106 @@ class BioVisionCardiacSpectral(nn.Module):
         return self.classifier(fused).squeeze(-1)
 
 
+class BioVisionMultiHarmonic(nn.Module):
+    """Multi-Harmonic Cardiac Spectral + Attentive Visual BioVision Model."""
+
+    def __init__(self, hidden_size: int = 64, dropout: float = 0.20):
+        super().__init__()
+        self.visual_lstm = nn.LSTM(
+            input_size=1792,
+            hidden_size=hidden_size,
+            num_layers=2,
+            batch_first=True,
+            bidirectional=True,
+            dropout=dropout,
+        )
+        visual_dim = hidden_size * 2
+        self.attn = nn.MultiheadAttention(embed_dim=visual_dim, num_heads=4, batch_first=True, dropout=dropout)
+        self.visual_norm = nn.LayerNorm(visual_dim * 2)
+
+        self.rppg_time_conv = nn.Sequential(
+            nn.Conv1d(1, 32, kernel_size=7, padding=3),
+            nn.BatchNorm1d(32),
+            nn.GELU(),
+            nn.Conv1d(32, 64, kernel_size=5, padding=2),
+            nn.BatchNorm1d(64),
+            nn.GELU(),
+            nn.Conv1d(64, 64, kernel_size=3, padding=1),
+            nn.BatchNorm1d(64),
+            nn.GELU(),
+            nn.AdaptiveAvgPool1d(1),
+        )
+
+        # 32 spectral features: Vasomotor (6) + Fundamental (10) + Secondary (12) + PNR_fund (1) + PNR_harm (1) + HarmRatio (1) + Entropy (1)
+        self.cardiac_spectral_mlp = nn.Sequential(
+            nn.Linear(32, 64),
+            nn.BatchNorm1d(64),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(64, 64),
+            nn.BatchNorm1d(64),
+            nn.GELU(),
+        )
+        self.phys_norm = nn.LayerNorm(128)
+
+        self.gate = nn.Sequential(
+            nn.Linear(visual_dim * 2 + 128, 128),
+            nn.Sigmoid(),
+        )
+
+        self.classifier = nn.Sequential(
+            nn.Linear(visual_dim * 2 + 128, 128),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(128, 64),
+            nn.GELU(),
+            nn.Dropout(dropout * 0.7),
+            nn.Linear(64, 1),
+        )
+
+    def extract_multi_harmonic_features(self, rppg: torch.Tensor) -> torch.Tensor:
+        fft_mag = torch.abs(torch.fft.rfft(rppg, dim=-1))
+        vaso_band = fft_mag[:, 2:8]
+        fund_band = fft_mag[:, 8:18]
+        harm_band = fft_mag[:, 18:30]
+        pnr_fund = fund_band.max(dim=-1, keepdim=True).values / (fund_band.mean(dim=-1, keepdim=True) + 1e-6)
+        pnr_harm = harm_band.max(dim=-1, keepdim=True).values / (harm_band.mean(dim=-1, keepdim=True) + 1e-6)
+        harm_ratio = (harm_band.sum(dim=-1, keepdim=True) + 1e-6) / (fund_band.sum(dim=-1, keepdim=True) + 1e-6)
+        cardiac_total = fft_mag[:, 8:30] + 1e-8
+        cardiac_prob = cardiac_total / cardiac_total.sum(dim=-1, keepdim=True)
+        spectral_entropy = -torch.sum(cardiac_prob * torch.log(cardiac_prob), dim=-1, keepdim=True) / 3.09
+        return torch.cat([vaso_band, fund_band, harm_band, pnr_fund, pnr_harm, harm_ratio, spectral_entropy], dim=-1)
+
+    def forward(self, visual_features: torch.Tensor, rppg: torch.Tensor) -> torch.Tensor:
+        lstm_out, _ = self.visual_lstm(visual_features)
+        attn_out, _ = self.attn(lstm_out, lstm_out, lstm_out)
+        mean_p = lstm_out.mean(dim=1)
+        max_p, _ = attn_out.max(dim=1)
+        visual = self.visual_norm(torch.cat([mean_p, max_p], dim=1))
+
+        time_feat = self.rppg_time_conv(rppg.unsqueeze(1)).squeeze(-1)
+        spectral_feat = self.cardiac_spectral_mlp(self.extract_multi_harmonic_features(rppg))
+        phys = self.phys_norm(torch.cat([time_feat, spectral_feat], dim=1))
+
+        gated_phys = phys * self.gate(torch.cat((visual, phys), dim=1))
+        fused = torch.cat((visual, gated_phys), dim=1)
+        return self.classifier(fused).squeeze(-1)
+
+
+class BioVisionEnsemble(nn.Module):
+    """Soft-voting ensemble of multiple BioVision models."""
+
+    def __init__(self, models: list):
+        super().__init__()
+        self.models = nn.ModuleList(models)
+
+    def forward(self, visual_features: torch.Tensor, rppg: torch.Tensor) -> torch.Tensor:
+        logits = [m(visual_features, rppg) for m in self.models]
+        probs = torch.stack([torch.sigmoid(l) for l in logits], dim=0).mean(dim=0)
+        probs = torch.clamp(probs, 1e-6, 1.0 - 1e-6)
+        return torch.log(probs / (1.0 - probs))
+
+
 def build_biovision_multimodal_model() -> BioVisionMultimodalModel:
     return BioVisionMultimodalModel()
 
@@ -348,6 +448,9 @@ def build_biovision_model_from_checkpoint(checkpoint_path: str) -> nn.Module:
 
     keys = set(k.replace('module.', '') for k in state_dict.keys())
     if any('cardiac_spectral_mlp' in k for k in keys):
+        w = state_dict.get('cardiac_spectral_mlp.0.weight')
+        if w is not None and w.shape[-1] == 32:
+            return BioVisionMultiHarmonic()
         return BioVisionCardiacSpectral()
     elif any('rppg_spectral_mlp' in k for k in keys):
         return BioVisionPhysioSpectral()
