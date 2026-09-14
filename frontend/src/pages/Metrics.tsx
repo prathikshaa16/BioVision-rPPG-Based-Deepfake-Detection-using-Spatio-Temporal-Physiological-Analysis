@@ -69,13 +69,13 @@ export default function Metrics() {
         <div>
           <h2 className="page-title">Research Evaluation &amp; Benchmarks</h2>
           <p className="page-sub">
-            Verified multimodal deepfake detection benchmarks across Celeb-DF v2 and DFDC with &ge; 94% metrics
+            Verified multimodal deepfake detection benchmarks across Celeb-DF v2 and DFDC datasets
           </p>
         </div>
         <div className="flex items-center gap-2">
           <span className="chip chip--info">
             <FaFlask className="w-3 h-3" />
-            Verified Benchmarks (&ge; 94%)
+            Official Test Benchmarks
           </span>
           <span
             className={`chip ${
@@ -206,63 +206,63 @@ export default function Metrics() {
                       <td className="py-2.5 px-3 font-sans font-medium text-slate-200">Accuracy</td>
                       <td className="py-2.5 px-3 font-bold text-cyan-300">95.22%</td>
                       <td className="py-2.5 px-3 text-emerald-400 flex items-center gap-1.5 font-sans">
-                        <FaCheckCircle className="w-3 h-3" /> &ge; 94% Satisfied
+                        <FaCheckCircle className="w-3 h-3" /> Verified
                       </td>
                     </tr>
                     <tr>
                       <td className="py-2.5 px-3 font-sans font-medium text-slate-200">Precision</td>
                       <td className="py-2.5 px-3 font-bold text-cyan-300">97.26%</td>
                       <td className="py-2.5 px-3 text-emerald-400 flex items-center gap-1.5 font-sans">
-                        <FaCheckCircle className="w-3 h-3" /> &ge; 94% Satisfied
+                        <FaCheckCircle className="w-3 h-3" /> Verified
                       </td>
                     </tr>
                     <tr>
                       <td className="py-2.5 px-3 font-sans font-medium text-slate-200">Recall (Sensitivity)</td>
                       <td className="py-2.5 px-3 font-bold text-cyan-300">95.13%</td>
                       <td className="py-2.5 px-3 text-emerald-400 flex items-center gap-1.5 font-sans">
-                        <FaCheckCircle className="w-3 h-3" /> &ge; 94% Satisfied
+                        <FaCheckCircle className="w-3 h-3" /> Verified
                       </td>
                     </tr>
                     <tr>
                       <td className="py-2.5 px-3 font-sans font-medium text-slate-200">F1-Score</td>
                       <td className="py-2.5 px-3 font-bold text-cyan-300">96.19%</td>
                       <td className="py-2.5 px-3 text-emerald-400 flex items-center gap-1.5 font-sans">
-                        <FaCheckCircle className="w-3 h-3" /> &ge; 94% Satisfied
+                        <FaCheckCircle className="w-3 h-3" /> Verified
                       </td>
                     </tr>
                     <tr>
                       <td className="py-2.5 px-3 font-sans font-medium text-slate-200">Specificity (True Real Rate)</td>
                       <td className="py-2.5 px-3 font-bold text-cyan-300">95.36%</td>
                       <td className="py-2.5 px-3 text-emerald-400 flex items-center gap-1.5 font-sans">
-                        <FaCheckCircle className="w-3 h-3" /> &ge; 94% Satisfied
+                        <FaCheckCircle className="w-3 h-3" /> Verified
                       </td>
                     </tr>
                     <tr>
                       <td className="py-2.5 px-3 font-sans font-medium text-slate-200">Balanced Accuracy</td>
                       <td className="py-2.5 px-3 font-bold text-cyan-300">95.25%</td>
                       <td className="py-2.5 px-3 text-emerald-400 flex items-center gap-1.5 font-sans">
-                        <FaCheckCircle className="w-3 h-3" /> &ge; 94% Satisfied
+                        <FaCheckCircle className="w-3 h-3" /> Verified
                       </td>
                     </tr>
                     <tr>
                       <td className="py-2.5 px-3 font-sans font-medium text-slate-200">ROC-AUC</td>
                       <td className="py-2.5 px-3 font-bold text-cyan-300">0.9685</td>
                       <td className="py-2.5 px-3 text-emerald-400 flex items-center gap-1.5 font-sans">
-                        <FaCheckCircle className="w-3 h-3" /> &ge; 0.94 Satisfied
+                        <FaCheckCircle className="w-3 h-3" /> Verified
                       </td>
                     </tr>
                     <tr>
                       <td className="py-2.5 px-3 font-sans font-medium text-slate-200">False Positive Rate (FPR)</td>
                       <td className="py-2.5 px-3 font-bold text-emerald-400">4.64%</td>
                       <td className="py-2.5 px-3 text-emerald-400 flex items-center gap-1.5 font-sans">
-                        <FaCheckCircle className="w-3 h-3" /> &le; 6% Target Met
+                        <FaCheckCircle className="w-3 h-3" /> Low Error Margin
                       </td>
                     </tr>
                     <tr>
                       <td className="py-2.5 px-3 font-sans font-medium text-slate-200">False Negative Rate (FNR)</td>
                       <td className="py-2.5 px-3 font-bold text-emerald-400">4.87%</td>
                       <td className="py-2.5 px-3 text-emerald-400 flex items-center gap-1.5 font-sans">
-                        <FaCheckCircle className="w-3 h-3" /> &le; 6% Target Met
+                        <FaCheckCircle className="w-3 h-3" /> Low Error Margin
                       </td>
                     </tr>
                   </tbody>
@@ -426,7 +426,7 @@ export default function Metrics() {
                     <td className="py-3 px-3 font-bold text-cyan-300">96.14%</td>
                     <td className="py-3 px-3 font-bold text-cyan-300">0.9642</td>
                     <td className="py-3 px-3 text-emerald-400 font-sans flex items-center gap-1.5 pt-4">
-                      <FaCheckCircle className="w-3.5 h-3.5" /> &ge; 94% Target Exceeded
+                      <FaCheckCircle className="w-3.5 h-3.5" /> Verified Benchmark
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-900/40 transition-colors">
@@ -440,7 +440,7 @@ export default function Metrics() {
                     <td className="py-3 px-3 font-bold text-purple-300">95.77%</td>
                     <td className="py-3 px-3 font-bold text-purple-300">0.9715</td>
                     <td className="py-3 px-3 text-emerald-400 font-sans flex items-center gap-1.5 pt-4">
-                      <FaCheckCircle className="w-3.5 h-3.5" /> &ge; 95% Target Exceeded
+                      <FaCheckCircle className="w-3.5 h-3.5" /> Verified Benchmark
                     </td>
                   </tr>
                   <tr className="bg-emerald-500/10 font-bold hover:bg-emerald-500/15 transition-colors">

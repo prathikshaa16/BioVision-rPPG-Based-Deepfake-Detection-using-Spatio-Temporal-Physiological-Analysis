@@ -220,8 +220,10 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
         # Temporal Sequence Anomaly Aggregation:
         # In video deepfake forensics, localized temporal manipulation (e.g. face swaps, expression reenactments)
         # must not be diluted by static ending frames where motion diminishes.
-        if fake_ratio >= 0.25 or (p_max >= 0.70 and p_top_k >= 0.55):
+        if fake_ratio >= 0.18 or (p_max >= 0.65 and p_top_k >= 0.50):
             visual_fake_probability = 0.65 * p_top_k + 0.35 * p_mean
+        elif fake_ratio >= 0.08 or p_max >= 0.54:
+            visual_fake_probability = 0.45 * p_top_k + 0.35 * p_mean + 0.20 * probability
         elif p_max <= 0.40 and fake_ratio == 0.0:
             visual_fake_probability = 0.60 * probability + 0.40 * p_mean
         else:
@@ -248,11 +250,11 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
         # Run late fusion
         fusion = fuse_probabilities(visual_fake_probability, rppg_payload)
 
-        # Check for physiological synthetic jitter anomaly (HR > 130 or Freq > 2.2 Hz with low SNR/quality)
+        # Check for physiological synthetic jitter anomaly (HR > 120 or Freq > 2.0 Hz with low SNR/quality)
         if rppg_status == 'AVAILABLE' and squal is not None:
-            if (hr is not None and hr > 130.0) or (dfreq is not None and dfreq > 2.2):
-                if squal < 0.35:
-                    jitter_anomaly = 0.75
+            if (hr is not None and hr > 120.0) or (dfreq is not None and dfreq > 2.0):
+                if squal < 0.45:
+                    jitter_anomaly = 0.78
                     fused_p = 0.80 * visual_fake_probability + 0.20 * jitter_anomaly
                     fusion['rppg_anomaly_score'] = jitter_anomaly
                     fusion['probability'] = round(fused_p, 6)

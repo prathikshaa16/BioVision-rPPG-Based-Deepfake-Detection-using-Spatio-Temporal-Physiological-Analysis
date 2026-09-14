@@ -103,7 +103,7 @@ export default function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCl
                   </span>
                 </div>
                 <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                  94.6% AUC
+                  Online
                 </span>
               </div>
 

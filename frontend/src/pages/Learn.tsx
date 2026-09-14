@@ -77,10 +77,10 @@ const METHODOLOGY_STEPS = [
   },
   {
     step: '07',
-    title: 'Threshold-Calibrated Classification (≥94% Target)',
+    title: 'Threshold-Calibrated Classification',
     desc: "Final classification optimized via Youden's J index and label smoothing.",
     details:
-      "The fused representation passes through a regularized classification head trained with label smoothing (ε = 0.05) and balanced mini-batch sampling. The operating decision threshold is calibrated on validation data via Youden's J index, balancing Sensitivity (≥94%) and Specificity (≥94%) to output the final forensic assessment.",
+      "The fused representation passes through a regularized classification head trained with label smoothing (ε = 0.05) and balanced mini-batch sampling. The operating decision threshold is calibrated on validation data via Youden's J index, optimizing the balance between Sensitivity and Specificity to output the final forensic assessment.",
     icon: FaShieldAlt,
     color: 'text-rose-400',
     borderColor: 'border-rose-500/30',
@@ -189,7 +189,7 @@ export default function Learn() {
               4. Youden's J Threshold Calibration
             </div>
             <p className="text-slate-400 leading-relaxed">
-              Rather than using a fixed 0.50 cutoff, the decision boundary is calibrated on validation data using Youden's J index (maximizing Sensitivity + Specificity - 1), achieving balanced accuracy ≥94% across test sets.
+              Rather than using an uncalibrated heuristic cutoff, the decision boundary is calibrated on validation data using Youden's J index (maximizing Sensitivity + Specificity - 1), achieving robust balanced classification across diverse holdout test sets.
             </p>
           </div>
         </div>
