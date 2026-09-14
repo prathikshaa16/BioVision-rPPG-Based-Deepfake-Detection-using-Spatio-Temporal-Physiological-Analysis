@@ -7,7 +7,8 @@ from typing import Dict, List
 import aiofiles
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
 from .config import BASE_DIR, DEFAULT_MODEL_TYPE, MAX_UPLOAD_SIZE, MODEL_PATH, UPLOAD_DIR, resolve_model_paths
@@ -323,3 +324,27 @@ async def dashboard_stats():
         'device': _resolve_device(),
         'source': 'live' if analyses else 'demo',
     }
+
+
+# --- Static SPA Frontend Serving (Turnkey Single-Port Deployment) ---
+_dist_candidates = [
+    BASE_DIR.parent / 'frontend' / 'dist',
+    Path('/app/frontend/dist'),
+    Path('./frontend/dist').resolve(),
+]
+_dist_path = next((p for p in _dist_candidates if p.exists() and (p / 'index.html').exists()), None)
+
+if _dist_path:
+    if (_dist_path / 'assets').exists():
+        app.mount('/assets', StaticFiles(directory=str(_dist_path / 'assets')), name='assets')
+
+    @app.get('/{full_path:path}')
+    async def serve_spa(full_path: str):
+        api_prefixes = ('health', 'upload', 'evaluation', 'model', 'analyses', 'dashboard', 'openapi.json', 'docs', 'redoc')
+        if any(full_path == p or full_path.startswith(f'{p}/') for p in api_prefixes):
+            raise HTTPException(status_code=404, detail='Not found')
+        file_candidate = _dist_path / full_path
+        if full_path and file_candidate.is_file():
+            return FileResponse(file_candidate)
+        return FileResponse(_dist_path / 'index.html')
+
