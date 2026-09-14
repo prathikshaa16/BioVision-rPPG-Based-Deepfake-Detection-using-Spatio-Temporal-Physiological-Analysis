@@ -1,102 +1,122 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import Card from '../components/Card'
-import { APP_NAME } from '../lib/nav'
-import { FaEye, FaFingerprint, FaMicrochip, FaShieldAlt, FaArrowRight, FaChartLine } from 'react-icons/fa'
+import { APP_NAME, APP_TAGLINE } from '../lib/nav'
+import {
+  FaEye,
+  FaFingerprint,
+  FaMicrochip,
+  FaShieldAlt,
+  FaArrowRight,
+  FaHeartbeat,
+  FaBrain,
+  FaLayerGroup,
+  FaFlask,
+} from 'react-icons/fa'
 
 export default function About() {
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-8">
       <header className="page-head">
         <div>
           <h2 className="page-title">About {APP_NAME}</h2>
-          <p className="page-sub">Spatio-temporal deep learning with physiological signal analysis</p>
+          <p className="page-sub">Spatio-temporal deep learning with remote physiological signal analysis</p>
         </div>
         <span className="chip chip--info">
-          <span className="status-dot bg-cyan-400" />
-          Trusted Detection
+          <FaShieldAlt className="w-3.5 h-3.5" />
+          Research Rationale
         </span>
       </header>
 
-      <div className="glass-card--accent p-7">
-        <div className="flex items-start gap-4">
-          <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0 shadow-[0_0_20px_rgba(34,211,238,0.4)]">
+      {/* 25. WHY BIOVISION? */}
+      <div className="glass-card--accent p-8 space-y-5 border border-cyan-500/30">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-white font-bold text-base flex-shrink-0 shadow-[0_0_20px_rgba(34,211,238,0.4)]">
             BV
           </div>
           <div>
-            <p className="text-lg font-bold text-slate-50">{APP_NAME}</p>
-            <p className="text-sm text-slate-400">{APP_NAME} · AI Deepfake Detection &amp; Video Forensics</p>
+            <h3 className="text-2xl font-bold text-slate-50">Why BioVision?</h3>
+            <p className="text-sm text-cyan-300/90 font-medium">{APP_NAME} · {APP_TAGLINE}</p>
           </div>
         </div>
-        <p className="text-sm text-slate-400 leading-relaxed mt-5">
-          {APP_NAME} is an AI deepfake detection platform that helps you verify whether a video is real. It samples
-          video frames, detects faces with MTCNN, scores each face with an EfficientNet-B4 forensic classifier, and
-          extracts CHROM rPPG from forehead and cheek regions. Quality-gated late fusion combines the two evidence
-          channels into a transparent forensic report.
-        </p>
+
+        <div className="space-y-4 text-sm text-slate-300 leading-relaxed pt-2">
+          <p className="text-base font-medium text-slate-100">
+            Conventional visual deepfake detection can focus heavily on spatial appearance. BioVision extends this analysis
+            by incorporating temporal dynamics and physiological information extracted from facial video.
+          </p>
+          <p className="text-slate-400">
+            The goal is to evaluate complementary evidence rather than relying solely on appearance.
+            While spatial generators continue to achieve photorealistic image quality, synthetic videos struggle to reproduce
+            the synchronized interplay of micro-temporal expressions and natural blood-volume cardiac pulses (rPPG) across facial skin.
+          </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card title="Our Mission">
-          <p className="text-sm text-slate-500 leading-relaxed">
-            Make multimodal deepfake verification accessible. Every verdict should expose the visual sequence,
-            temporal representation, physiological signal, and fusion decision behind it.
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <Card title="Our Scientific Rationale">
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Move beyond isolated frame classification. Real-world manipulation is sequence-level and physiological.
+            Evaluating spatio-temporal representations alongside chrominance pulse dynamics provides multiple layers of forensic verification.
           </p>
         </Card>
-        <Card title="Our Approach">
-          <p className="text-sm text-slate-500 leading-relaxed">
-            Face-sequence processing, EfficientNet-B4 spatial features, LSTM temporal modeling, rPPG extraction,
-            and trained feature fusion. The model contract and pipeline are documented in the Model page.
+
+        <Card title="Multimodal Architecture">
+          <p className="text-xs text-slate-400 leading-relaxed">
+            EfficientNet-B4 extracts 1,792-d spatial embeddings, a 2-layer LSTM models 256-d temporal dynamics,
+            and CHROM rPPG derives a 64-d physiological representation. A quality-gated late fusion layer integrates the evidence.
           </p>
         </Card>
-        <Card title="Our Commitment">
-          <p className="text-sm text-slate-500 leading-relaxed">
-            We never fabricate results. If the backend is offline, we say so. Benchmark claims are only reported when
-            measured on public datasets.
+
+        <Card title="Defensible Benchmarks">
+          <p className="text-xs text-slate-400 leading-relaxed">
+            We adhere strictly to research integrity. No metrics are fabricated.
+            Performance numbers are reported directly from validated held-out test partitions (such as Celeb-DF v2 official test) with locked thresholds.
           </p>
         </Card>
       </div>
 
-      <Card title="How the pipeline works">
-        <ul className="space-y-3">
-          {[
-            { icon: FaEye, t: 'Video sequence', d: 'Facial regions are sampled and standardized for sequence analysis.' },
-            { icon: FaFingerprint, t: 'Spatial representation', d: 'EfficientNet-B4 encodes each selected facial crop.' },
-            { icon: FaMicrochip, t: 'Temporal modeling', d: 'An LSTM learns dependencies across the ordered visual representations.' },
-            { icon: FaChartLine, t: 'Physiological analysis', d: 'CHROM-derived rPPG features provide an additional temporal evidence channel.' },
-            { icon: FaShieldAlt, t: 'Feature fusion', d: 'The trained BioVision fusion head combines visual-temporal and physiological features.' },
-          ].map((s) => (
-            <li key={s.t} className="flex gap-4">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-cyan-400/15 to-blue-500/15 border border-cyan-400/25 flex items-center justify-center flex-shrink-0">
-                <s.icon className="w-4 h-4 text-cyan-300" />
+      <Card title="The Multimodal Pipeline at a Glance">
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-4 rounded-xl bg-slate-900/80 border border-cyan-500/30 space-y-2">
+              <div className="text-xs font-mono font-bold text-cyan-300 uppercase tracking-wider flex items-center gap-2">
+                <FaEye /> Spatial Branch
               </div>
-              <div>
-                <p className="font-medium text-slate-100 text-sm">{s.t}</p>
-                <p className="text-sm text-slate-500">{s.d}</p>
+              <p className="text-xs text-slate-400">
+                EfficientNet-B4 analyzes facial appearance, blending margins, and synthesis artifacts per crop.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-slate-900/80 border border-blue-500/30 space-y-2">
+              <div className="text-xs font-mono font-bold text-blue-300 uppercase tracking-wider flex items-center gap-2">
+                <FaBrain /> Temporal Branch
               </div>
-            </li>
-          ))}
-        </ul>
-      </Card>
+              <p className="text-xs text-slate-400">
+                A 2-layer LSTM models sequence relationships across 32 ordered observations to catch temporal flickering.
+              </p>
+            </div>
 
-      <Card title="Limitations & Ethics">
-        <p className="text-sm text-slate-500 leading-relaxed">
-          Detection is probabilistic and not perfect. False positives and negatives can occur. Use this tool
-          responsibly, respect privacy, and consider legal/ethical implications before sharing or acting on results.
-          For critical decisions, always combine automated detection with manual review and additional forensic
-          methods.
-        </p>
-      </Card>
+            <div className="p-4 rounded-xl bg-slate-900/80 border border-emerald-500/30 space-y-2">
+              <div className="text-xs font-mono font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-2">
+                <FaHeartbeat /> Physiological Branch
+              </div>
+              <p className="text-xs text-slate-400">
+                CHROM rPPG isolates periodic color shifts caused by cardiac cycles, checking for authentic biological blood flow.
+              </p>
+            </div>
+          </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <Link to="/analysis" className="btn btn-primary flex-1">
-          Start Analyzing
-          <FaArrowRight className="w-4 h-4" />
-        </Link>
-        <Link to="/contact" className="btn btn-outline flex-1">
-          Contact Us
-        </Link>
-      </div>
+          <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span className="text-xs text-slate-400">
+              Explore the detailed layer dimensions, tensor shapes, and live status on the Architecture page.
+            </span>
+            <Link to="/architecture" className="btn btn-primary text-xs py-2 px-4 flex-shrink-0">
+              View Architecture <FaArrowRight className="ml-1" />
+            </Link>
+          </div>
+        </div>
+      </Card>
     </div>
   )
 }

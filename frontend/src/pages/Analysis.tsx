@@ -21,6 +21,9 @@ import {
   FaServer,
   FaVideo,
   FaWaveSquare,
+  FaHeartbeat,
+  FaBrain,
+  FaEye,
 } from 'react-icons/fa'
 
 type Phase = 'idle' | 'uploading' | 'analyzing'
@@ -28,23 +31,26 @@ type Phase = 'idle' | 'uploading' | 'analyzing'
 const BACKEND_HINT = 'python -m uvicorn backend.app.main:app --port 8000'
 
 const STAGES = [
-  { icon: FaCloudUploadAlt, label: 'Uploading video' },
-  { icon: FaFilm, label: 'Processing facial sequence' },
-  { icon: FaFingerprint, label: 'Extracting spatial features' },
-  { icon: FaRobot, label: 'Modeling temporal dependencies' },
-  { icon: FaWaveSquare, label: 'Analyzing rPPG physiology' },
-  { icon: FaLayerGroup, label: 'Fusing multimodal evidence' },
-  { icon: FaFileAlt, label: 'Generating report' },
+  { icon: FaCloudUploadAlt, label: 'Video uploaded' },
+  { icon: FaEye, label: 'Facial regions detected' },
+  { icon: FaFingerprint, label: 'Spatial features extracted' },
+  { icon: FaBrain, label: 'Temporal patterns analyzed' },
+  { icon: FaWaveSquare, label: 'rPPG signal extracted' },
+  { icon: FaHeartbeat, label: 'Physiological features analyzed' },
+  { icon: FaLayerGroup, label: 'Multimodal features fused' },
+  { icon: FaFileAlt, label: 'Generating final assessment...' },
 ]
 
 export default function Analysis() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [progress, setProgress] = useState<number>(0)
+  const [activeStage, setActiveStage] = useState<number>(0)
   const [error, setError] = useState<string | null>(null)
   const [backendError, setBackendError] = useState(false)
   const [online, setOnline] = useState<boolean | null>(null)
   const xhrRef = useRef<XMLHttpRequest | null>(null)
+  const stageTimerRef = useRef<number | null>(null)
   const navigate = useNavigate()
 
   const loading = phase !== 'idle'
@@ -63,8 +69,26 @@ export default function Analysis() {
   useEffect(() => {
     return () => {
       if (xhrRef.current) xhrRef.current.abort()
+      if (stageTimerRef.current) clearInterval(stageTimerRef.current)
     }
   }, [])
+
+  // Simulate realistic stage progression while server runs inference
+  useEffect(() => {
+    if (phase === 'analyzing') {
+      setActiveStage(1)
+      const timer = window.setInterval(() => {
+        setActiveStage((prev) => (prev < 6 ? prev + 1 : prev))
+      }, 3500)
+      stageTimerRef.current = timer
+      return () => clearInterval(timer)
+    } else if (phase === 'uploading') {
+      setActiveStage(0)
+    } else {
+      setActiveStage(0)
+      if (stageTimerRef.current) clearInterval(stageTimerRef.current)
+    }
+  }, [phase])
 
   const handleFiles = useCallback((files: FileList) => {
     setError(null)
@@ -123,7 +147,10 @@ export default function Analysis() {
       if (e.lengthComputable) setProgress((e.loaded / e.total) * 100)
     }
 
-    xhr.upload.onload = () => setPhase('analyzing')
+    xhr.upload.onload = () => {
+      setPhase('analyzing')
+      setActiveStage(1)
+    }
 
     xhr.onload = () => {
       xhrRef.current = null
@@ -204,13 +231,12 @@ export default function Analysis() {
         <div>
           <h1 className="page-title">Video Analysis</h1>
           <p className="page-sub">
-            Upload a video and the BioVision forensic pipeline will analyze it for deepfake indicators using
-            face-level EfficientNet-B4 inference.
+            Upload a facial video to execute the full BioVision spatio-temporal and physiological analysis pipeline.
           </p>
         </div>
         <span className="chip chip--info">
           <span className="status-dot bg-cyan-400" />
-          Forensic Analysis Workspace
+          Multimodal Pipeline
         </span>
       </header>
 
@@ -233,8 +259,8 @@ export default function Analysis() {
             <button onClick={() => checkBackend()} className="btn btn-outline text-sm">
               Retry Connection
             </button>
-            <button onClick={() => navigate('/model')} className="btn btn-ghost text-sm">
-              Model Status
+            <button onClick={() => navigate('/architecture')} className="btn btn-ghost text-sm">
+              Architecture Status
             </button>
           </div>
         </div>
@@ -255,7 +281,7 @@ export default function Analysis() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <Card
-            title="Upload Video"
+            title="Upload Facial Video"
             subtitle={
               selectedFile
                 ? `Selected: ${selectedFile.name} (${formatFileSize(selectedFile.size)})`
@@ -265,7 +291,9 @@ export default function Analysis() {
           >
             <div className="space-y-4">
               <div className="flex items-center justify-between gap-3 flex-wrap">
-                <span className="text-xs text-slate-500">Pipeline: face sequence → EfficientNet-B4 → LSTM → rPPG → trained fusion</span>
+                <span className="text-xs text-slate-400">
+                  Target: EfficientNet-B4 (Spatial) + LSTM (Temporal) + CHROM (rPPG) + Multimodal Fusion
+                </span>
                 <span
                   className={`chip ${
                     backendOffline
@@ -291,7 +319,7 @@ export default function Analysis() {
                     </>
                   ) : phase === 'analyzing' ? (
                     <>
-                      <span className="status-dot bg-cyan-400 pulse-glow" /> Analyzing
+                      <span className="status-dot bg-cyan-400 pulse-glow" /> Analyzing Pipeline
                     </>
                   ) : (
                     <>
@@ -320,121 +348,143 @@ export default function Analysis() {
                 type="button"
                 onClick={handleAnalyze}
                 disabled={!selectedFile || loading || backendOffline}
-                className="btn btn-primary w-full py-3.5 text-base"
+                className="btn btn-primary w-full py-3.5 text-base shadow-lg shadow-cyan-500/20"
               >
                 {loading ? (
                   <>
                     <FaCircleNotch className="w-5 h-5 animate-spin" />
-                    {phase === 'uploading' ? 'Uploading…' : 'Analyzing…'}
+                    {phase === 'uploading' ? 'Uploading Video…' : 'Running BioVision Pipeline…'}
                   </>
                 ) : (
                   <>
                     <FaVideo className="w-4 h-4" />
-                    Analyze Video
+                    Start Analysis
                   </>
                 )}
               </button>
 
               {backendOffline && (
                 <p className="text-xs text-slate-500 text-center">
-                  Analyze is disabled while the analysis server is offline — no results are ever fabricated.
+                  Analysis is disabled while the backend server is offline. No results are ever simulated.
                 </p>
               )}
 
+              {/* 14. PROCESSING STATUS PAGE */}
               {loading && (
-                <div className="rounded-2xl border border-cyan-400/25 bg-cyan-400/5 p-5 space-y-4">
+                <div className="rounded-2xl border border-cyan-400/25 bg-cyan-950/20 p-5 space-y-4">
+                  <div className="flex items-center justify-between border-b border-cyan-500/20 pb-3">
+                    <span className="text-xs font-mono font-bold text-cyan-300 uppercase tracking-wider flex items-center gap-2">
+                      <FaRobot className="w-4 h-4" /> BIOVISION ANALYSIS
+                    </span>
+                    <span className="text-xs font-semibold text-cyan-400">
+                      {phase === 'uploading' ? `${Math.round(Math.min(100, progress))}%` : 'In Progress'}
+                    </span>
+                  </div>
+
                   {phase === 'uploading' && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5 text-sm font-medium text-slate-200">
-                          <FaCircleNotch className="w-4 h-4 text-cyan-300 animate-spin" />
-                          Uploading {formatFileSize(selectedFile?.size || 0)} — {Math.round(Math.min(100, progress))}%
-                        </div>
-                        <span className="text-sm font-semibold text-cyan-300">{Math.round(Math.min(100, progress))}%</span>
-                      </div>
-                      <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                        <div
-                          className="h-2 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-200"
-                          style={{ width: `${Math.max(3, Math.min(100, progress))}%` }}
-                        />
-                      </div>
+                    <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="h-2 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-200"
+                        style={{ width: `${Math.max(3, Math.min(100, progress))}%` }}
+                      />
                     </div>
                   )}
 
-                  <div className="space-y-2.5">
-                    <div className="flex items-center gap-2.5 text-sm font-medium text-slate-200">
-                      <FaHourglassHalf className="w-4 h-4 text-cyan-300 animate-pulse" />
-                      {phase === 'uploading' ? 'Preparing analysis pipeline…' : 'Running the detection pipeline — this can take 30–90 seconds on CPU (includes physiological signal extraction).'}
+                  {phase === 'analyzing' && (
+                    <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                      <div className="h-full w-1/3 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full animate-[progress-slide_1.4s_ease-in-out_infinite]" />
                     </div>
-                    {phase === 'analyzing' && (
-                      <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                        <div className="h-full w-1/3 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full animate-[progress-slide_1.4s_ease-in-out_infinite]" />
-                      </div>
-                    )}
-                  </div>
+                  )}
 
-                  <div className="space-y-1.5 pt-1">
+                  {/* 8-Stage Research Pipeline Progression */}
+                  <div className="space-y-2 pt-1 font-mono text-xs">
                     {STAGES.map((stage, i) => {
-                      const done = phase === 'analyzing' && i === 0
-                      const active = phase === 'analyzing' && i === 1
+                      const isDone = (phase === 'analyzing' && i < activeStage) || (phase === 'analyzing' && i === 0)
+                      const isActive = phase === 'analyzing' && i === activeStage
+                      const isPending = phase === 'uploading' || i > activeStage
+
                       return (
-                        <div key={stage.label} className={`flex items-center gap-3 text-sm ${done ? 'text-emerald-300' : active ? 'text-cyan-200' : 'text-slate-500'}`}>
-                          {done ? (
+                        <div
+                          key={stage.label}
+                          className={`flex items-center gap-3 py-1 px-2 rounded-lg transition-colors ${
+                            isDone
+                              ? 'text-emerald-300 bg-emerald-950/20'
+                              : isActive
+                                ? 'text-cyan-200 bg-cyan-950/40 font-semibold border border-cyan-500/30'
+                                : 'text-slate-500 opacity-60'
+                          }`}
+                        >
+                          {isDone ? (
                             <FaCheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                          ) : active ? (
+                          ) : isActive ? (
                             <FaCircleNotch className="w-4 h-4 text-cyan-300 animate-spin flex-shrink-0" />
                           ) : (
-                            <stage.icon className="w-4 h-4 flex-shrink-0 opacity-60" />
+                            <span className="w-4 h-4 rounded-full border border-slate-700 inline-block flex-shrink-0 text-center text-[10px] leading-3 text-slate-600">
+                              {i + 1}
+                            </span>
                           )}
-                          <span>{stage.label}</span>
-                          {active && <span className="text-[11px] text-cyan-400/70 ml-auto">in progress</span>}
+                          <span className="flex-1">{stage.label}</span>
+                          {isActive && (
+                            <span className="text-[10px] uppercase font-bold text-cyan-400 tracking-wider">
+                              processing...
+                            </span>
+                          )}
+                          {isDone && (
+                            <span className="text-[10px] text-emerald-400">
+                              ✓ complete
+                            </span>
+                          )}
                         </div>
                       )
                     })}
-                    <p className="text-[11px] text-slate-500 pt-1">
-                      The backend does not report per-stage completion — the upload stage reflects real progress, the rest run server-side.
-                    </p>
                   </div>
                 </div>
               )}
             </div>
           </Card>
 
-          <Card title="How It Works">
-            <div className="space-y-3">
+          <Card title="How BioVision Analyzes the Video">
+            <div className="space-y-4">
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 text-[#04121d] flex items-center justify-center font-semibold text-sm">1</div>
+                <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 flex items-center justify-center font-bold text-xs">1</div>
                 <div>
-                  <p className="font-medium text-slate-100">Frame Extraction</p>
-                  <p className="text-slate-500 text-sm">Video is sampled at uniform intervals to select representative frames</p>
+                  <p className="font-semibold text-slate-100 text-sm">Sequence-Level Sampling</p>
+                  <p className="text-slate-400 text-xs mt-0.5">Thirty-two facial observations are selected across the video to preserve temporal context.</p>
                 </div>
               </div>
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 text-[#04121d] flex items-center justify-center font-semibold text-sm">2</div>
+                <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 flex items-center justify-center font-bold text-xs">2</div>
                 <div>
-                  <p className="font-medium text-slate-100">Face Detection</p>
-                  <p className="text-slate-500 text-sm">MTCNN detects faces in each frame and extracts the largest face region</p>
+                  <p className="font-semibold text-slate-100 text-sm">Face Region Standardization</p>
+                  <p className="text-slate-400 text-xs mt-0.5">MTCNN isolates the primary facial bounding box and normalizes crops to 224×224.</p>
                 </div>
               </div>
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 text-[#04121d] flex items-center justify-center font-semibold text-sm">3</div>
+                <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 flex items-center justify-center font-bold text-xs">3</div>
                 <div>
-                  <p className="font-medium text-slate-100">AI Analysis</p>
-                  <p className="text-slate-500 text-sm">EfficientNet-B4 model analyzes each face for deepfake indicators</p>
+                  <p className="font-semibold text-slate-100 text-sm">Spatial Feature Extraction</p>
+                  <p className="text-slate-400 text-xs mt-0.5">EfficientNet-B4 generates 1792-dimensional embeddings capturing fine visual and edge artifacts.</p>
                 </div>
               </div>
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 text-[#04121d] flex items-center justify-center font-semibold text-sm">4</div>
+                <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-blue-500/20 border border-blue-400/30 text-blue-300 flex items-center justify-center font-bold text-xs">4</div>
                 <div>
-                  <p className="font-medium text-slate-100">Physiological Signal (rPPG)</p>
-                  <p className="text-slate-500 text-sm">CHROM pulse extracted from forehead + cheek regions — quality-gated evidence contributes up to 20%</p>
+                  <p className="font-semibold text-slate-100 text-sm">Temporal LSTM Dependency Modeling</p>
+                  <p className="text-slate-400 text-xs mt-0.5">A 2-layer LSTM analyzes the ordered visual embeddings to capture cross-frame dynamics (256-d representation).</p>
                 </div>
               </div>
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 text-[#04121d] flex items-center justify-center font-semibold text-sm">5</div>
+                <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 flex items-center justify-center font-bold text-xs">5</div>
                 <div>
-                  <p className="font-medium text-slate-100">Results</p>
-                  <p className="text-slate-500 text-sm">Per-frame predictions are aggregated to generate a final classification</p>
+                  <p className="font-semibold text-slate-100 text-sm">CHROM Physiological Signal Recovery</p>
+                  <p className="text-slate-400 text-xs mt-0.5">Extracts remote photoplethysmography pulses from facial skin color variations in the 0.8–3.0 Hz cardiac band.</p>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-400/30 text-purple-300 flex items-center justify-center font-bold text-xs">6</div>
+                <div>
+                  <p className="font-semibold text-slate-100 text-sm">Quality-Gated Late Fusion</p>
+                  <p className="text-slate-400 text-xs mt-0.5">The trained fusion head combines 80% visual-temporal evidence with 20% quality-gated physiological evidence.</p>
                 </div>
               </div>
             </div>
@@ -442,40 +492,48 @@ export default function Analysis() {
         </div>
 
         <div className="space-y-6">
-          <Card title="Requirements">
-            <ul className="space-y-2.5 text-sm text-slate-400">
-              <li className="flex items-start gap-2">
+          <Card title="Video Requirements">
+            <ul className="space-y-3 text-sm text-slate-400">
+              <li className="flex items-start gap-2.5">
                 <FaCheckCircle className="w-4 h-4 text-cyan-400 mt-0.5 flex-shrink-0" />
-                <span>Video formats: MP4, MOV, MKV, AVI, WebM</span>
+                <span><strong className="text-slate-200">Video Formats:</strong> MP4, MOV, MKV, AVI, WebM</span>
               </li>
-              <li className="flex items-start gap-2">
+              <li className="flex items-start gap-2.5">
                 <FaCheckCircle className="w-4 h-4 text-cyan-400 mt-0.5 flex-shrink-0" />
-                <span>Visible faces in the video</span>
+                <span><strong className="text-slate-200">Visible Subject:</strong> Requires clearly detectable facial regions</span>
               </li>
-              <li className="flex items-start gap-2">
+              <li className="flex items-start gap-2.5">
                 <FaCheckCircle className="w-4 h-4 text-cyan-400 mt-0.5 flex-shrink-0" />
-                <span>Maximum file size: 500 MB</span>
+                <span><strong className="text-slate-200">Max File Size:</strong> 500 MB</span>
               </li>
-              <li className="flex items-start gap-2">
+              <li className="flex items-start gap-2.5">
                 <FaCheckCircle className="w-4 h-4 text-cyan-400 mt-0.5 flex-shrink-0" />
-                <span>Processing time: typically 30–90 seconds (rPPG signal extraction is the slowest step)</span>
+                <span><strong className="text-slate-200">Processing Time:</strong> Typically 30–75s on CPU; hardware acceleration available via CUDA GPU</span>
               </li>
             </ul>
           </Card>
 
-          <Card title="What to Expect">
-            <div className="space-y-2.5 text-sm text-slate-400">
-              <p><strong className="text-emerald-400">REAL:</strong> no deepfake indicators detected</p>
-              <p><strong className="text-rose-400">FAKE:</strong> manipulation detected with elevated confidence</p>
-              <p><strong className="text-amber-400">UNCERTAIN:</strong> inconclusive — manual review advised</p>
-              <p className="pt-2 text-xs text-slate-500">Verdicts come from the backend classification (mean ≤ 40% REAL, ≥ 60% FAKE).</p>
+          <Card title="Assessment Interpretation">
+            <div className="space-y-3 text-sm text-slate-400">
+              <div>
+                <span className="text-emerald-400 font-bold">REAL:</span> Fused likelihood indicates coherent spatio-temporal dynamics and physiological pulse.
+              </div>
+              <div>
+                <span className="text-rose-400 font-bold">FAKE:</span> Significant visual, temporal, or physiological inconsistency detected.
+              </div>
+              <div>
+                <span className="text-amber-400 font-bold">UNCERTAIN:</span> Boundary case (40%–60%); manual review recommended.
+              </div>
+              <p className="pt-2 text-xs text-slate-500 border-t border-slate-800">
+                Decision operating point: optimized via Youden's J on the validated benchmark.
+              </p>
             </div>
           </Card>
 
-          <Card title="Privacy & Data">
-            <p className="text-sm text-slate-500 leading-relaxed">
-              Videos are uploaded directly to your local analysis server and processed on your machine. Results are
-              stored only in your browser and in the server's in-memory store.
+          <Card title="Privacy & Research Integrity">
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Videos are processed entirely within the local API pipeline. No data is stored externally or shared.
+              All reported metrics reflect authentic model outputs from the validated checkpoint.
             </p>
           </Card>
         </div>

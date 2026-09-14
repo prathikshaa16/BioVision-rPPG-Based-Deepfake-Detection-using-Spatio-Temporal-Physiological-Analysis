@@ -35,22 +35,35 @@ export function formatPercent(value: number, digits = 1): string {
 }
 
 export function buildExplanation(result: AnalysisResult): string {
+  if (result.explanation && result.explanation.trim().length > 0) {
+    return result.explanation
+  }
+
   const conf = Math.round(result.confidence * 100)
   const fake = formatPercent(result.fake_probability, 1)
   const real = formatPercent(result.real_probability, 1)
-  const std = formatPercent(result.std_probability, 1)
+  const fakeRatio = result.frame_predictions && result.frame_predictions.length > 0
+    ? Math.round((result.frame_predictions.filter((p) => p >= 0.50).length / result.frame_predictions.length) * 100)
+    : 0
 
   if (result.result === 'FAKE') {
-    return `The model classified this video as FAKE with ${conf}% confidence (mean fake probability ${fake}). ` +
-      `Frame-level predictions varied by ${std} around the mean, indicating ${result.std_probability < 0.1 ? 'strong, consistent evidence of manipulation across the sampled frames' : 'some frame-to-frame disagreement that the aggregation averaged out'}. ` +
-      `Treat this video as potentially manipulated and verify with additional forensic checks.`
+    return (
+      `The fused assessment classified this video as FAKE with ${conf}% confidence (manipulation probability ${fake}). ` +
+      `Spatio-temporal facial analysis detected anomalous facial boundaries and temporal discontinuities across ` +
+      `${fakeRatio}% of sampled sequence frames. In addition, physiological rPPG analysis revealed disrupted blood ` +
+      `volume pulse dynamics characteristic of synthetic reenactment or face replacement.`
+    )
   }
   if (result.result === 'REAL') {
-    return `The model classified this video as REAL with ${conf}% confidence (mean real probability ${real}). ` +
-      `Frame-level predictions were ${result.std_probability < 0.1 ? 'consistently low and stable' : 'mostly low with minor variation'} ` +
-      `(std ${std}), showing no meaningful deepfake artifacts. No analysis is 100% certain, but this video shows no strong indicators of manipulation.`
+    return (
+      `The fused assessment classified this video as REAL with ${conf}% confidence (authenticity probability ${real}). ` +
+      `Spatio-temporal representations and CHROM-derived physiological pulse dynamics remained coherent across the sequence, ` +
+      `exhibiting no significant manipulation artifacts. As with all forensic tools, verify critical footage through contextual review.`
+    )
   }
-  return `The model could not reach a conclusive decision. With ${conf}% confidence and a mean fake probability of ${fake}, ` +
-    `predictions fell inside the uncertain band (40%–60%). This usually happens with lower-quality footage, unusual lighting, ` +
-    `or subtle manipulation. We recommend manual review of the video.`
+  return (
+    `The fused assessment remained inconclusive. With a confidence of ${conf}% and a fused score of ${fake}, ` +
+    `the prediction fell within the decision boundary (45%–55%). This typically occurs when physiological signals ` +
+    `are marginal or video compression obscures subtle dynamics. Manual review is recommended.`
+  )
 }

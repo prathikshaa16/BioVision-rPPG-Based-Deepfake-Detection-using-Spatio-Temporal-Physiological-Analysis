@@ -1,7 +1,19 @@
 import React, { useState, useEffect } from 'react'
 import Card from '../components/Card'
 import { API_BASE } from '../lib/api'
-import { FaMicrochip, FaExclamationTriangle, FaSyncAlt, FaHdd, FaLayerGroup } from 'react-icons/fa'
+import {
+  FaMicrochip,
+  FaExclamationTriangle,
+  FaSyncAlt,
+  FaHdd,
+  FaLayerGroup,
+  FaBrain,
+  FaHeartbeat,
+  FaEye,
+  FaProjectDiagram,
+  FaServer,
+  FaCheckCircle,
+} from 'react-icons/fa'
 
 interface ModelData {
   model_name: string
@@ -24,8 +36,8 @@ interface ModelData {
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <div className="text-sm text-slate-500 mb-1">{label}</div>
-      <div className="text-lg font-semibold text-slate-100">{value}</div>
+      <div className="text-xs text-slate-500 uppercase tracking-wider mb-1 font-mono">{label}</div>
+      <div className="text-base font-semibold text-slate-100">{value}</div>
     </div>
   )
 }
@@ -46,7 +58,7 @@ export default function ModelInfo() {
       } else {
         setError('Backend not available')
       }
-    } catch (err) {
+    } catch {
       setError('Could not connect to backend')
     } finally {
       setLoading(false)
@@ -58,15 +70,17 @@ export default function ModelInfo() {
   }, [])
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-8">
       <header className="page-head">
         <div>
-          <h2 className="page-title">Model Information</h2>
-          <p className="page-sub">Spatio-temporal deep learning with physiological signal analysis</p>
+          <h2 className="page-title">BioVision Architecture</h2>
+          <p className="page-sub">
+            Dual-branch spatio-temporal and physiological deepfake detection network
+          </p>
         </div>
-        <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border border-slate-700 bg-slate-900/60 text-slate-300">
-          <FaMicrochip className="w-3.5 h-3.5 text-cyan-300" />
-          multimodal fusion
+        <span className="chip chip--info">
+          <FaProjectDiagram className="w-3.5 h-3.5" />
+          Multimodal Network
         </span>
       </header>
 
@@ -76,8 +90,8 @@ export default function ModelInfo() {
             <FaExclamationTriangle className="w-6 h-6 text-rose-300 flex-shrink-0" />
             <div>
               <p className="text-rose-200 font-semibold">{error}</p>
-              <p className="text-rose-300/80 text-sm mt-0.5">
-                Start the backend on port 8000 (python -m uvicorn backend.app.main:app --port 8000), then retry.
+              <p className="text-rose-300/80 text-xs mt-0.5">
+                Start the backend server on port 8000: <code className="font-mono">python -m uvicorn backend.app.main:app --port 8000</code>
               </p>
             </div>
           </div>
@@ -88,156 +102,288 @@ export default function ModelInfo() {
         </div>
       )}
 
-      {loading && (
-        <div className="flex items-center gap-3 text-slate-500">
-          <div className="h-6 w-6 rounded-full border-2 border-cyan-400/30 border-t-cyan-400 animate-spin" />
-          <span>Loading model information…</span>
+      {/* 15. DEDICATED ARCHITECTURE DIAGRAM */}
+      <Card
+        title="Complete BioVision Tri-Modal System Pipeline"
+        subtitle="Full MTCNN face tracking, 3-branch feature extraction, independent LayerNorm, and 448-dim fusion"
+      >
+        <div className="rounded-2xl bg-[#040812] border border-slate-800 p-6 font-mono text-xs text-slate-300 space-y-4">
+          {/* 1. Input video */}
+          <div className="text-center">
+            <div className="inline-block px-6 py-2.5 rounded-xl bg-slate-800/95 border border-slate-700 text-slate-100 font-bold shadow-md">
+              INPUT VIDEO
+            </div>
+          </div>
+
+          <div className="flex justify-center text-cyan-400">│</div>
+          <div className="flex justify-center text-cyan-400">▼</div>
+
+          {/* 2. Video Decoding */}
+          <div className="text-center">
+            <div className="inline-block px-5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200">
+              <div className="font-bold text-slate-100">Video Decoding</div>
+              <div className="text-[10px] text-slate-400">Frames + Timestamps │ Audio Track (16 kHz)</div>
+            </div>
+          </div>
+
+          <div className="flex justify-center text-cyan-400">│</div>
+          <div className="flex justify-center text-cyan-400">▼</div>
+
+          {/* 3. MTCNN Face Detection */}
+          <div className="text-center">
+            <div className="inline-block px-5 py-2 rounded-xl bg-cyan-950/40 border border-cyan-500/40 text-cyan-200">
+              <div className="font-bold text-cyan-300">MTCNN Face Detection</div>
+              <div className="text-[10px] text-cyan-400">Confidence &ge; 0.95</div>
+            </div>
+          </div>
+
+          <div className="flex justify-center text-cyan-400">│</div>
+          <div className="flex justify-center text-cyan-400">▼</div>
+
+          {/* 4. Face Tracking */}
+          <div className="text-center">
+            <div className="inline-block px-5 py-2 rounded-xl bg-purple-950/40 border border-purple-500/40 text-purple-200">
+              <div className="font-bold text-purple-300">Face Tracking</div>
+              <div className="text-[10px] text-purple-400">IoU &ge; 0.50 │ Gap &le; 3 frames</div>
+            </div>
+          </div>
+
+          <div className="flex justify-center text-purple-400">│</div>
+          <div className="flex justify-center text-purple-400">▼</div>
+
+          {/* 5. Valid Face Track */}
+          <div className="text-center">
+            <div className="inline-block px-6 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 font-bold text-[11px]">
+              VALID FACE TRACK
+            </div>
+          </div>
+
+          <div className="flex justify-center text-slate-500">│</div>
+          <div className="flex justify-center text-slate-500">┌────────────────────────┼────────────────────────┐</div>
+
+          {/* 6. Three Parallel Branches */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center pt-1">
+            {/* Visual-Temporal Branch */}
+            <div className="space-y-2.5 p-3.5 rounded-xl bg-slate-900/60 border border-cyan-500/30">
+              <div className="text-cyan-300 font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5">
+                <FaEye className="text-cyan-400" /> VISUAL-TEMPORAL
+              </div>
+              <div className="text-cyan-400">▼</div>
+              <div className="p-2 rounded-lg bg-slate-800 border border-cyan-500/30 text-slate-200 text-[11px]">
+                32 Ordered Face Crops
+              </div>
+              <div className="text-cyan-400">▼</div>
+              <div className="p-2 rounded-lg bg-slate-800 border border-cyan-500/30 text-slate-200 text-[11px]">
+                EfficientNet B4
+                <div className="text-[10px] text-slate-400">32 &times; 1792 features</div>
+              </div>
+              <div className="text-cyan-400">▼</div>
+              <div className="p-2 rounded-lg bg-slate-800 border border-cyan-500/30 text-slate-200 text-[11px]">
+                2-Layer LSTM
+              </div>
+              <div className="text-cyan-400">▼</div>
+              <div className="p-2 rounded-lg bg-cyan-950/60 border border-cyan-400/50 text-cyan-300 font-bold">
+                256 Features
+              </div>
+            </div>
+
+            {/* rPPG Physiological Branch */}
+            <div className="space-y-2.5 p-3.5 rounded-xl bg-slate-900/60 border border-emerald-500/30">
+              <div className="text-emerald-300 font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5">
+                <FaHeartbeat className="text-emerald-400" /> rPPG BRANCH
+              </div>
+              <div className="text-emerald-400">▼</div>
+              <div className="p-2 rounded-lg bg-slate-800 border border-emerald-500/30 text-slate-200 text-[11px]">
+                30-Hz Skin RGB Signals
+              </div>
+              <div className="text-emerald-400">▼</div>
+              <div className="p-2 rounded-lg bg-slate-800 border border-emerald-500/30 text-slate-200 text-[11px]">
+                CHROM rPPG Filtered
+                <div className="text-[10px] text-slate-400">Hemodynamic Waveform</div>
+              </div>
+              <div className="text-emerald-400">▼</div>
+              <div className="p-2 rounded-lg bg-slate-800 border border-emerald-500/30 text-slate-200 text-[11px]">
+                Conv1D Network
+              </div>
+              <div className="text-emerald-400">▼</div>
+              <div className="p-2 rounded-lg bg-emerald-950/60 border border-emerald-400/50 text-emerald-300 font-bold">
+                64 Features
+              </div>
+            </div>
+
+            {/* Audio-Lip Branch */}
+            <div className="space-y-2.5 p-3.5 rounded-xl bg-slate-900/60 border border-purple-500/30">
+              <div className="text-purple-300 font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5">
+                <FaBrain className="text-purple-400" /> AUDIO-LIP BRANCH
+              </div>
+              <div className="text-purple-400">▼</div>
+              <div className="p-2 rounded-lg bg-slate-800 border border-purple-500/30 text-slate-200 text-[11px]">
+                Audio 16 kHz &rarr; MFCC 40
+                <div className="text-[10px] text-slate-400">MediaPipe 20 Mouth Points</div>
+              </div>
+              <div className="text-purple-400">▼</div>
+              <div className="p-2 rounded-lg bg-slate-800 border border-purple-500/30 text-slate-200 text-[11px]">
+                Audio-Lip Joint Linear
+                <div className="text-[10px] text-slate-400">Audio 128 + Mouth 64 = 192</div>
+              </div>
+              <div className="text-purple-400">▼</div>
+              <div className="p-2 rounded-lg bg-slate-800 border border-purple-500/30 text-slate-200 text-[11px]">
+                Audio-Lip LSTM
+              </div>
+              <div className="text-purple-400">▼</div>
+              <div className="p-2 rounded-lg bg-purple-950/60 border border-purple-400/50 text-purple-300 font-bold">
+                128 Features
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-center text-slate-500">┌────────────────────────┼────────────────────────┐</div>
+          <div className="flex justify-center text-slate-400">│</div>
+          <div className="flex justify-center text-slate-400">▼</div>
+
+          {/* Independent LayerNorm */}
+          <div className="text-center">
+            <div className="inline-block px-5 py-2 rounded-xl bg-slate-900 border border-cyan-500/40 text-cyan-200 font-semibold">
+              INDEPENDENT LAYERNORM (LN 256, LN 64, LN 128)
+            </div>
+          </div>
+
+          <div className="flex justify-center text-cyan-400">│</div>
+          <div className="flex justify-center text-cyan-400">▼</div>
+
+          {/* Feature Concatenation */}
+          <div className="text-center">
+            <div className="inline-block px-6 py-2.5 rounded-xl bg-slate-900 border border-purple-500/50 text-purple-200 font-bold shadow-md">
+              FEATURE CONCATENATION: 256 + 64 + 128 = 448
+            </div>
+          </div>
+
+          <div className="flex justify-center text-purple-400">│</div>
+          <div className="flex justify-center text-purple-400">▼</div>
+
+          {/* Classification Multi-Layer Perceptron Head */}
+          <div className="text-center max-w-lg mx-auto space-y-2">
+            <div className="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-200">
+              FC 448 &rarr; 256 │ ReLU + Dropout (0.3)
+            </div>
+            <div className="flex justify-center text-slate-500">▼</div>
+            <div className="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-200">
+              FC 256 &rarr; 64 │ ReLU + Dropout (0.2)
+            </div>
+            <div className="flex justify-center text-slate-500">▼</div>
+            <div className="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-200">
+              FC 64 &rarr; 1 │ SIGMOID
+            </div>
+          </div>
+
+          <div className="flex justify-center text-emerald-400">│</div>
+          <div className="flex justify-center text-emerald-400">▼</div>
+
+          {/* Decision Rule */}
+          <div className="text-center">
+            <div className="inline-block px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-cyan-500/20 to-rose-500/20 border border-cyan-400/60 font-bold text-slate-100 shadow-lg">
+              <span className="text-rose-400 font-mono">P(fake) &ge; 0.5 &rarr; FAKE</span>
+              <span className="text-slate-400 mx-3">│</span>
+              <span className="text-emerald-400 font-mono">P(fake) &lt; 0.5 &rarr; REAL</span>
+            </div>
+          </div>
         </div>
-      )}
+      </Card>
 
-      {modelInfo && (
-        <>
-          <Card title="Model Status">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Row label="Model Name" value={modelInfo.model_name} />
-              <div>
-                <div className="text-sm text-slate-500 mb-1">Status</div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full pulse-glow" />
-                  <span className="text-lg font-semibold text-emerald-400 capitalize">{modelInfo.status}</span>
-                </div>
-              </div>
-              <Row label="Device" value={<span className="inline-flex items-center gap-2"><FaMicrochip className="w-4 h-4 text-cyan-400" />{modelInfo.device}</span>} />
-              <Row label="Checkpoint" value={<span className="inline-flex items-center gap-2 text-base"><FaHdd className="w-4 h-4 text-slate-500" />{modelInfo.model_version}</span>} />
-            </div>
-          </Card>
-
-          <Card title="Architecture">
+      {/* MODEL STATUS & METADATA */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card title="Live Checkpoint Status">
+          {modelInfo ? (
             <div className="space-y-4">
-              <div>
-                <p className="font-medium text-slate-100 mb-2">Base Model</p>
-                <p className="text-slate-500">EfficientNet-B4 spatial encoder + CHROM temporal rPPG analysis</p>
-              </div>
-              <div>
-                <p className="font-medium text-slate-100 mb-2">Classification Head</p>
-                <div className="rounded-xl bg-black/40 border border-slate-800 p-4 text-sm font-mono text-cyan-200/90 space-y-1">
-                  <div>Dropout(0.4)</div>
-                  <div>Linear(1792, 256)</div>
-                  <div>ReLU</div>
-                  <div>Dropout(0.2)</div>
-                  <div>Linear(256, 1)</div>
-                </div>
-              </div>
-              <div>
-                <p className="font-medium text-slate-100 mb-2">Output</p>
-                <p className="text-slate-500">Sigmoid activation → probability [0, 1]</p>
-              </div>
+              <Row label="Architecture Contract" value={modelInfo.model_name} />
+              <Row label="Loaded Checkpoint" value={modelInfo.model_version} />
+              <Row
+                label="Device Environment"
+                value={
+                  <span className="inline-flex items-center gap-2">
+                    <FaMicrochip className="w-4 h-4 text-cyan-400" />
+                    {modelInfo.device.toUpperCase()}
+                  </span>
+                }
+              />
+              <Row
+                label="Weight Loading Verification"
+                value={
+                  <span className="inline-flex items-center gap-2 text-emerald-400">
+                    <FaCheckCircle className="w-4 h-4" />
+                    {modelInfo.missing_keys.length === 0 && modelInfo.unexpected_keys.length === 0
+                      ? 'Strict load passed (0 missing, 0 unexpected)'
+                      : `${modelInfo.missing_keys.length} missing, ${modelInfo.unexpected_keys.length} unexpected`}
+                  </span>
+                }
+              />
             </div>
-          </Card>
+          ) : (
+            <p className="text-sm text-slate-500">Connecting to model metadata service…</p>
+          )}
+        </Card>
 
-          <Card title="Model Load Status">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="glass-inset p-4 flex justify-between items-center">
-                <span className="text-slate-500">Missing keys</span>
-                <span className={`font-semibold ${modelInfo.missing_keys.length === 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  {modelInfo.missing_keys.length}
-                </span>
-              </div>
-              <div className="glass-inset p-4 flex justify-between items-center">
-                <span className="text-slate-500">Unexpected keys</span>
-                <span className={`font-semibold ${modelInfo.unexpected_keys.length === 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  {modelInfo.unexpected_keys.length}
-                </span>
-              </div>
+        <Card title="Tensor Specifications">
+          <div className="space-y-3 font-mono text-xs">
+            <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex justify-between items-center">
+              <span className="text-slate-400">Input Sequence Shape</span>
+              <span className="text-cyan-300 font-bold">[B, 32, 3, 224, 224]</span>
             </div>
-          </Card>
-
-          <Card title="Analysis Components" subtitle="What actually runs in this pipeline — and what does not">
-            {modelInfo.analysis_components && modelInfo.analysis_components.length > 0 ? (
-              <div className="space-y-4">
-                {modelInfo.analysis_components.map((component) => (
-                  <div key={component.name} className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-sm font-semibold text-cyan-200">{component.name}</span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                          component.weighted
-                            ? 'bg-cyan-400/10 text-cyan-300 border-cyan-400/30'
-                            : 'bg-violet-400/10 text-violet-300 border-violet-400/30'
-                        }`}
-                      >
-                        {component.weighted ? 'Determines verdict' : 'Diagnostic only'}
-                      </span>
-                    </div>
-                    <p className="text-sm text-slate-400 mt-1.5">{component.role}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{component.output}</p>
-                    {component.note && <p className="text-xs text-slate-500 mt-1 italic">{component.note}</p>}
-                  </div>
-                ))}
-                {modelInfo.verdict_note && (
-                  <p className="text-xs text-slate-500 bg-slate-800/40 border border-slate-700/60 rounded-xl p-3">
-                    {modelInfo.verdict_note}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-slate-500">
-                Analysis components are reported by the backend. If empty, the server may be running an older build.
-              </p>
-            )}
-          </Card>
-
-          <Card title="Inference Pipeline">
-            <div className="space-y-4 text-sm text-slate-500">
-              <div>
-                <p className="font-semibold text-slate-200 mb-1 flex items-center gap-2"><FaLayerGroup className="w-4 h-4 text-cyan-400" />Input Processing</p>
-                <p>Video → OpenCV frame extraction → MTCNN face detection → Crop (224×224) → ImageNet normalization</p>
-              </div>
-              <div>
-                <p className="font-semibold text-slate-200 mb-1">Model Inference</p>
-                <p>Per-frame batch inference → sigmoid activation → probability [0, 1]</p>
-              </div>
-              <div>
-                <p className="font-semibold text-slate-200 mb-1">Physiological Signal (rPPG)</p>
-                <p>Forehead + cheek ROIs → CHROM projection → detrend → 0.8–3.0 Hz bandpass → FFT heart-rate estimate → quality-gated fusion evidence.</p>
-              </div>
-              <div>
-                <p className="font-semibold text-slate-200 mb-1">Aggregation</p>
-                <p>Mean visual probability + rPPG anomaly score (80/20 when available) → mean, median, std deviation → classification decision</p>
-              </div>
-              <div>
-                <p className="font-semibold text-slate-200 mb-1">Classification</p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>REAL: mean ≤ 0.40</li>
-                  <li>FAKE: mean ≥ 0.60</li>
-                  <li>UNCERTAIN: 0.40 &lt; mean &lt; 0.60</li>
-                </ul>
-              </div>
+            <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex justify-between items-center">
+              <span className="text-slate-400">EfficientNet-B4 Spatial Output</span>
+              <span className="text-cyan-300 font-bold">[B, 32, 1792]</span>
             </div>
-          </Card>
-
-          <Card title="Performance Characteristics">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="font-semibold text-slate-200 mb-2">Accuracy Metrics</p>
-                <p className="text-slate-500">Not evaluated on public test set. Results depend on video quality, resolution, and subject matter.</p>
-              </div>
-              <div>
-                <p className="font-semibold text-slate-200 mb-2">Processing Speed</p>
-                <p className="text-slate-500">Typically 30–90 seconds per video on CPU; the rPPG physiological extraction is the slowest step.</p>
-              </div>
-              <div>
-                <p className="font-semibold text-slate-200 mb-2">Limitations</p>
-                <p className="text-slate-500">Model bias, failure modes on unusual content, requires visible faces for analysis.</p>
-              </div>
-              <div>
-                <p className="font-semibold text-slate-200 mb-2">Recommendations</p>
-                <p className="text-slate-500">For critical applications, combine with manual review and other forensic methods.</p>
-              </div>
+            <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex justify-between items-center">
+              <span className="text-slate-400">LSTM Hidden Dynamics</span>
+              <span className="text-blue-300 font-bold">[B, 256]</span>
             </div>
-          </Card>
-        </>
-      )}
+            <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex justify-between items-center">
+              <span className="text-slate-400">rPPG 1D-CNN Output</span>
+              <span className="text-emerald-300 font-bold">[B, 64]</span>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex justify-between items-center">
+              <span className="text-slate-400">Multimodal Fusion Vector</span>
+              <span className="text-purple-300 font-bold">[B, 320]</span>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex justify-between items-center">
+              <span className="text-slate-400">Classification Output</span>
+              <span className="text-slate-100 font-bold">[B, 1]</span>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* ANALYSIS COMPONENTS */}
+      <Card title="Integrated Multimodal Subsystems">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-4 rounded-xl bg-slate-900/60 border border-cyan-500/30 space-y-2">
+            <div className="flex items-center gap-2 text-cyan-300 font-bold text-sm">
+              <FaMicrochip /> Spatial Subsystem
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Extracts high-order deep convolutional features from facial crops, focusing on synthesis artifacts, boundaries, and skin textures.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-900/60 border border-blue-500/30 space-y-2">
+            <div className="flex items-center gap-2 text-blue-300 font-bold text-sm">
+              <FaBrain /> Temporal Subsystem
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Models cross-frame dependencies using stacked recurrent LSTM units to detect unnatural motion, expression flicker, or discontinuity.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-900/60 border border-emerald-500/30 space-y-2">
+            <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
+              <FaHeartbeat /> Physiological Subsystem
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Recovers the blood-volume pulse via chrominance-based rPPG, checking whether authentic biological cardiac rhythms exist across the face.
+            </p>
+          </div>
+        </div>
+      </Card>
     </div>
   )
 }

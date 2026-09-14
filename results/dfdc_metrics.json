@@ -1,0 +1,21 @@
+{
+  "dataset": "DeepFake Detection Challenge (DFDC) - Zero Leakage Split",
+  "test_samples": 130,
+  "real_samples": 59,
+  "fake_samples": 71,
+  "model": "BioVision Tri-Modal Fusion Architecture",
+  "TP": 68,
+  "TN": 56,
+  "FP": 3,
+  "FN": 3,
+  "accuracy": 0.95385,
+  "precision": 0.95775,
+  "recall_sensitivity": 0.95775,
+  "specificity": 0.94915,
+  "f1": 0.95775,
+  "balanced_accuracy": 0.95345,
+  "roc_auc": 0.9715,
+  "fpr": 0.05085,
+  "fnr": 0.04225,
+  "selected_threshold": 0.5
+}

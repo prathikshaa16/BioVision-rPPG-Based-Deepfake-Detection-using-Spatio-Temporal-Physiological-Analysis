@@ -1,0 +1,19 @@
+{
+  "dataset": "Google/Jigsaw DFD + Celeb-DF Holdout",
+  "optimal_threshold": 0.8350000000000006,
+  "balanced_accuracy": 0.7860656945058182,
+  "accuracy": 0.6969092721834497,
+  "sensitivity": 0.6817204301075269,
+  "specificity": 0.8904109589041096,
+  "roc_auc": 0.8744144940344676,
+  "f1_score": 0.8066157712492474,
+  "true_positives": 634,
+  "true_negatives": 65,
+  "false_positives": 8,
+  "false_negatives": 296,
+  "seeds": [
+    42,
+    101,
+    777
+  ]
+}

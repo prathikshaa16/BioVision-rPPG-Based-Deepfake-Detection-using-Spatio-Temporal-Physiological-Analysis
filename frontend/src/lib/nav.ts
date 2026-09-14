@@ -1,6 +1,6 @@
 import type { IconType } from 'react-icons'
 import {
-  FaTachometerAlt,
+  FaHome,
   FaUpload,
   FaSearch,
   FaHistory,
@@ -8,8 +8,6 @@ import {
   FaMicrochip,
   FaBookOpen,
   FaInfoCircle,
-  FaEnvelope,
-  FaCog,
 } from 'react-icons/fa'
 
 export interface NavItem {
@@ -20,19 +18,17 @@ export interface NavItem {
 }
 
 export const APP_NAME = 'BioVision'
-export const APP_TAGLINE = 'AI Deepfake Detection & Video Forensics'
+export const APP_TAGLINE = 'Spatio-Temporal & Physiological Deepfake Detection'
 
 export const navItems: NavItem[] = [
-  { to: '/dashboard', label: 'Dashboard', icon: FaTachometerAlt, end: true },
-  { to: '/analysis', label: 'Analysis', icon: FaUpload },
+  { to: '/', label: 'Home', icon: FaHome, end: true },
+  { to: '/analysis', label: 'Analyze', icon: FaUpload },
+  { to: '/how-it-works', label: 'How It Works', icon: FaBookOpen },
+  { to: '/architecture', label: 'Architecture', icon: FaMicrochip },
   { to: '/results', label: 'Results', icon: FaSearch },
+  { to: '/evaluation', label: 'Evaluation', icon: FaChartBar },
   { to: '/history', label: 'History', icon: FaHistory },
-  { to: '/metrics', label: 'Metrics', icon: FaChartBar },
-  { to: '/model', label: 'Model', icon: FaMicrochip },
-  { to: '/learn', label: 'Learn', icon: FaBookOpen },
   { to: '/about', label: 'About', icon: FaInfoCircle },
-  { to: '/contact', label: 'Contact', icon: FaEnvelope },
-  { to: '/settings', label: 'Settings', icon: FaCog },
 ]
 
 export interface LandingLink {
@@ -42,10 +38,11 @@ export interface LandingLink {
 }
 
 export const landingNav: LandingLink[] = [
-  { label: 'Product', href: '#features' },
+  { label: 'Home', to: '/' },
+  { label: 'Analyze', to: '/analysis' },
   { label: 'How It Works', href: '#how-it-works' },
-  { label: 'Learn', to: '/learn' },
-  { label: 'Pricing', href: '#pricing' },
+  { label: 'Architecture', to: '/architecture' },
+  { label: 'Results', to: '/results' },
+  { label: 'Evaluation', to: '/evaluation' },
   { label: 'About', to: '/about' },
-  { label: 'Contact', to: '/contact' },
 ]

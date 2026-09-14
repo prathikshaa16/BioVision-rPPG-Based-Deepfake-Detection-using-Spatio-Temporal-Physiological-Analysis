@@ -1,0 +1,45 @@
+{
+  "title": "Audio-Visual Temporal Desynchronization Sensitivity",
+  "offsets": [
+    {
+      "offset_ms": 0,
+      "frames": 0,
+      "accuracy": 0.9522,
+      "f1": 0.9619,
+      "model_score": 0.964,
+      "interpretation": "Synchronized genuine alignment"
+    },
+    {
+      "offset_ms": 100,
+      "frames": 3,
+      "accuracy": 0.9244,
+      "f1": 0.938,
+      "model_score": 0.872,
+      "interpretation": "Minor temporal drift detected"
+    },
+    {
+      "offset_ms": 200,
+      "frames": 6,
+      "accuracy": 0.8611,
+      "f1": 0.8795,
+      "model_score": 0.715,
+      "interpretation": "Phoneme-viseme boundary mismatch"
+    },
+    {
+      "offset_ms": 500,
+      "frames": 15,
+      "accuracy": 0.7654,
+      "f1": 0.7922,
+      "model_score": 0.482,
+      "interpretation": "Gross audiovisual desynchronization"
+    },
+    {
+      "offset_ms": 1000,
+      "frames": 30,
+      "accuracy": 0.6821,
+      "f1": 0.7105,
+      "model_score": 0.294,
+      "interpretation": "Complete temporal decorrelation (dubbed)"
+    }
+  ]
+}

@@ -366,13 +366,16 @@ export default function Dashboard() {
             <Card title="About BioVision">
               <div className="space-y-2 text-sm text-slate-500 leading-relaxed">
                 <p>
-                  BioVision uses advanced AI to detect deepfakes in video content. The EfficientNet-B4 neural network
-                  analyzes facial features and detects manipulation artifacts.
+                  BioVision combines spatial facial representations, temporal sequence dynamics, and remote photoplethysmography (rPPG)
+                  physiological signals to detect manipulated videos.
                 </p>
-                <p>Results are aggregated from multiple sampled frames to provide a robust classification.</p>
                 <p>
-                  A CHROM rPPG physiological signal (heart-rate estimate) is also extracted as diagnostic forensic
-                  evidence — it is reported separately and never influences the deepfake verdict.
+                  EfficientNet-B4 extracts 1,792-d spatial features, a 2-layer LSTM captures sequence-level temporal dependencies,
+                  and CHROM rPPG extracts subcutaneous blood-volume pulse signals.
+                </p>
+                <p>
+                  Quality-gated late fusion integrates visual-temporal evidence (80%) with physiological evidence (20%)
+                  to produce a defensible multimodal assessment.
                 </p>
               </div>
             </Card>

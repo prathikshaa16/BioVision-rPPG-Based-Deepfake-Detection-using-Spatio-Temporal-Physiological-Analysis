@@ -154,11 +154,11 @@ export default function Settings() {
           </div>
           <div className="data-row">
             <span className="data-row-label">Detection model</span>
-            <span className="data-row-value">BioVision cached EfficientNet-B4 sequence + rPPG LSTM fusion</span>
+            <span className="data-row-value">BioVision cached visual-temporal + CHROM-rPPG fusion</span>
           </div>
           <div className="data-row">
             <span className="data-row-label">Pipeline</span>
-            <span className="data-row-value">Face sequence → spatial features → temporal LSTM → rPPG → trained fusion</span>
+            <span className="data-row-value">32 observations → [32,1792] embeddings → [240] rPPG → 320-D fusion classifier</span>
           </div>
           <div className="data-row">
             <span className="data-row-label">Frontend</span>

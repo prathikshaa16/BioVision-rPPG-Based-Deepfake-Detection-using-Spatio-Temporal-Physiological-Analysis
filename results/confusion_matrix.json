@@ -1,0 +1,20 @@
+{
+  "title": "BioVision Multimodal Confusion Matrix",
+  "total_samples": 648,
+  "matrix": {
+    "actual_real": {
+      "predicted_real": 226,
+      "predicted_fake": 11,
+      "total": 237,
+      "specificity": 0.9536,
+      "fpr": 0.0464
+    },
+    "actual_fake": {
+      "predicted_real": 20,
+      "predicted_fake": 391,
+      "total": 411,
+      "recall": 0.9513,
+      "fnr": 0.0487
+    }
+  }
+}

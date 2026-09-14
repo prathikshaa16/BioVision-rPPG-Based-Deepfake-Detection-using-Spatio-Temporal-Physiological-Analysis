@@ -123,6 +123,33 @@ export interface AnalysisResult {
   fusion?: FusionData
 }
 
+export interface OfficialEvaluationMetrics {
+  dataset: string
+  test_samples: number
+  real_samples: number
+  fake_samples: number
+  model: string
+  validation_auc: number
+  selected_threshold: number
+  TP: number
+  TN: number
+  FP: number
+  FN: number
+  accuracy: number
+  precision: number
+  recall_sensitivity: number
+  specificity: number
+  f1: number
+  balanced_accuracy: number
+  roc_auc: number
+}
+
+export interface EvaluationResponse {
+  metrics: OfficialEvaluationMetrics
+  roc: { false_positive_rate: number; true_positive_rate: number; threshold: number }[]
+  confusion_matrix: { actual: number; predicted: number; count: number }[]
+}
+
 export function isAnalysisResult(value: unknown): value is AnalysisResult {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>

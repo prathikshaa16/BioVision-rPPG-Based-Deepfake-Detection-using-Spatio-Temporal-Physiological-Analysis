@@ -2,7 +2,7 @@ import type { AnalysisResult } from './types'
 import { isAnalysisResult } from './types'
 import { timestampOf } from './types'
 
-export const API_BASE = 'http://127.0.0.1:8000'
+export const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, '') || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '')
 export const MAX_UPLOAD_BYTES = 500 * 1024 * 1024
 export const UPLOAD_TIMEOUT_MS = 10 * 60 * 1000
 
