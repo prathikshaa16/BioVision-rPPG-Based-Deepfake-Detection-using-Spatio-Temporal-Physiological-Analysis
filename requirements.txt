@@ -1,0 +1,16 @@
+# Hugging Face Spaces Requirements (Gradio SDK)
+gradio>=4.0.0
+torch
+torchvision
+opencv-python-headless>=4.8.0
+facenet-pytorch>=2.5.2
+numpy>=1.24.0
+scipy>=1.10.0
+Pillow>=10.0.0
+librosa>=0.10.0
+soundfile>=0.12.1
+imageio-ffmpeg>=0.4.9
+aiofiles>=23.1.0
+fastapi>=0.100.0
+python-multipart>=0.0.6
+uvicorn[standard]>=0.21.1
