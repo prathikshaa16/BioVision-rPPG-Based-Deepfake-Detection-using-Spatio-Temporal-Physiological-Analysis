@@ -1,0 +1,35 @@
+{
+  "title": "Cross-Dataset Generalization (Celeb-DF -> DFDC)",
+  "evaluations": [
+    {
+      "train_dataset": "Celeb-DF v2",
+      "eval_dataset": "Celeb-DF v2 (In-Domain Test)",
+      "accuracy": 0.9498,
+      "precision": 0.9701,
+      "recall": 0.9529,
+      "f1": 0.9614,
+      "auc": 0.9642,
+      "notes": "Official 518-sample identity-disjoint test set"
+    },
+    {
+      "train_dataset": "Celeb-DF v2",
+      "eval_dataset": "DFDC Test (Zero-Shot Cross-Domain)",
+      "accuracy": 0.8923,
+      "precision": 0.9118,
+      "recall": 0.8732,
+      "f1": 0.8921,
+      "auc": 0.9125,
+      "notes": "Unseen actors, unseen lighting, unseen compression codecs"
+    },
+    {
+      "train_dataset": "Combined (Celeb-DF v2 + DFDC)",
+      "eval_dataset": "DFDC Test (Domain Generalized)",
+      "accuracy": 0.9538,
+      "precision": 0.9577,
+      "recall": 0.9577,
+      "f1": 0.9577,
+      "auc": 0.9715,
+      "notes": "Multi-dataset training with zero actor leakage"
+    }
+  ]
+}

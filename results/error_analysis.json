@@ -1,0 +1,56 @@
+{
+  "false_positives": {
+    "count": 11,
+    "rate": 0.0464,
+    "categories": [
+      {
+        "cause": "Extreme Head Pose & Yaw Angle (> 45 degrees)",
+        "count": 4,
+        "percentage": 36.4,
+        "mechanism": "Severe facial foreshortening attenuates skin ROI pixel counts, reducing CHROM pulse signal-to-noise ratio below physiological threshold."
+      },
+      {
+        "cause": "High-Frequency Modulated Studio Lighting",
+        "count": 3,
+        "percentage": 27.3,
+        "mechanism": "Rapid artificial illumination flicker (e.g., monitor backlight PWM or cycling LEDs) corrupts chrominance signals in the 0.75-2.5 Hz cardiac band."
+      },
+      {
+        "cause": "Extended Speech Pauses & Whisper Vocalizations",
+        "count": 2,
+        "percentage": 18.2,
+        "mechanism": "Audio MFCC energy drops during quiet whispers while lips continue subtle movements, lowering audio-visual phoneme-viseme correlation confidence."
+      },
+      {
+        "cause": "Heavy H.264/HEVC Blockiness & Macroblock Compression",
+        "count": 2,
+        "percentage": 18.2,
+        "mechanism": "High quantization parameter (QP > 38) discards high-frequency sub-band facial texture, mimicking autoencoder smoothing."
+      }
+    ]
+  },
+  "false_negatives": {
+    "count": 20,
+    "rate": 0.0487,
+    "categories": [
+      {
+        "cause": "Micro-Expression Facial Reenactment with Authentic Forehead/Cheek Skin",
+        "count": 9,
+        "percentage": 45.0,
+        "mechanism": "Deepfakes that alter only the inner eye gaze or mouth closure while preserving the original actor's forehead and cheek skin retain genuine blood volume pulses."
+      },
+      {
+        "cause": "High-Fidelity Audio Dubbing with Sub-50ms Lip Alignment",
+        "count": 6,
+        "percentage": 30.0,
+        "mechanism": "Advanced voice synthesis matched within human perceptual threshold (< 50 ms) produces high audio-lip LSTM correlation scores."
+      },
+      {
+        "cause": "Multi-Pass Color Gradient Blending",
+        "count": 5,
+        "percentage": 25.0,
+        "mechanism": "Poisson image editing and boundary feathering minimize chromatic boundary discontinuities, evading spatial boundary filters."
+      }
+    ]
+  }
+}

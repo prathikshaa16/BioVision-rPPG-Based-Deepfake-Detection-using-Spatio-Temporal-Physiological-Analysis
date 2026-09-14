@@ -1,0 +1,21 @@
+{
+  "dataset": "Celeb-DF v2 Official Test",
+  "test_samples": 518,
+  "real_samples": 178,
+  "fake_samples": 340,
+  "model": "BioVision Tri-Modal Fusion Architecture",
+  "TP": 324,
+  "TN": 168,
+  "FP": 10,
+  "FN": 16,
+  "accuracy": 0.94981,
+  "precision": 0.97006,
+  "recall_sensitivity": 0.95294,
+  "specificity": 0.94382,
+  "f1": 0.96142,
+  "balanced_accuracy": 0.94838,
+  "roc_auc": 0.9642,
+  "fpr": 0.05618,
+  "fnr": 0.04706,
+  "selected_threshold": 0.5
+}

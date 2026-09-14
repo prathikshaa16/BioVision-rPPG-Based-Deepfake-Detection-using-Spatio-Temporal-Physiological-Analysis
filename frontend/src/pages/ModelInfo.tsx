@@ -104,107 +104,187 @@ export default function ModelInfo() {
 
       {/* 15. DEDICATED ARCHITECTURE DIAGRAM */}
       <Card
-        title="Complete BioVision System Architecture"
-        subtitle="End-to-end tensor dataflow across visual, temporal, and physiological branches"
+        title="Complete BioVision Tri-Modal System Pipeline"
+        subtitle="Full MTCNN face tracking, 3-branch feature extraction, independent LayerNorm, and 448-dim fusion"
       >
         <div className="rounded-2xl bg-[#040812] border border-slate-800 p-6 font-mono text-xs text-slate-300 space-y-4">
-          {/* Input video */}
+          {/* 1. Input video */}
           <div className="text-center">
-            <div className="inline-block px-5 py-2 rounded-xl bg-slate-800/90 border border-slate-700 text-slate-100 font-bold shadow-md">
+            <div className="inline-block px-6 py-2.5 rounded-xl bg-slate-800/95 border border-slate-700 text-slate-100 font-bold shadow-md">
               INPUT VIDEO
             </div>
           </div>
 
           <div className="flex justify-center text-cyan-400">│</div>
-          <div className="flex justify-center text-cyan-400">↓</div>
+          <div className="flex justify-center text-cyan-400">▼</div>
 
-          {/* Face Detection */}
+          {/* 2. Video Decoding */}
           <div className="text-center">
-            <div className="inline-block px-5 py-2 rounded-xl bg-cyan-950/40 border border-cyan-500/40 text-cyan-200 font-bold">
-              FACE DETECTION &amp; ROI CROPPING (MTCNN)
+            <div className="inline-block px-5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200">
+              <div className="font-bold text-slate-100">Video Decoding</div>
+              <div className="text-[10px] text-slate-400">Frames + Timestamps │ Audio Track (16 kHz)</div>
             </div>
           </div>
 
           <div className="flex justify-center text-cyan-400">│</div>
-          <div className="flex justify-center text-slate-500">┌────────────────────────┴────────────────────────┐</div>
+          <div className="flex justify-center text-cyan-400">▼</div>
 
-          {/* Dual Branch Flow */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center pt-1">
-            {/* Visual Branch */}
-            <div className="space-y-3 p-4 rounded-xl bg-slate-900/60 border border-cyan-500/30">
-              <div className="text-cyan-300 font-extrabold text-sm uppercase tracking-wider flex items-center justify-center gap-2">
-                <FaEye className="text-cyan-400" /> VISUAL BRANCH
+          {/* 3. MTCNN Face Detection */}
+          <div className="text-center">
+            <div className="inline-block px-5 py-2 rounded-xl bg-cyan-950/40 border border-cyan-500/40 text-cyan-200">
+              <div className="font-bold text-cyan-300">MTCNN Face Detection</div>
+              <div className="text-[10px] text-cyan-400">Confidence &ge; 0.95</div>
+            </div>
+          </div>
+
+          <div className="flex justify-center text-cyan-400">│</div>
+          <div className="flex justify-center text-cyan-400">▼</div>
+
+          {/* 4. Face Tracking */}
+          <div className="text-center">
+            <div className="inline-block px-5 py-2 rounded-xl bg-purple-950/40 border border-purple-500/40 text-purple-200">
+              <div className="font-bold text-purple-300">Face Tracking</div>
+              <div className="text-[10px] text-purple-400">IoU &ge; 0.50 │ Gap &le; 3 frames</div>
+            </div>
+          </div>
+
+          <div className="flex justify-center text-purple-400">│</div>
+          <div className="flex justify-center text-purple-400">▼</div>
+
+          {/* 5. Valid Face Track */}
+          <div className="text-center">
+            <div className="inline-block px-6 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 font-bold text-[11px]">
+              VALID FACE TRACK
+            </div>
+          </div>
+
+          <div className="flex justify-center text-slate-500">│</div>
+          <div className="flex justify-center text-slate-500">┌────────────────────────┼────────────────────────┐</div>
+
+          {/* 6. Three Parallel Branches */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center pt-1">
+            {/* Visual-Temporal Branch */}
+            <div className="space-y-2.5 p-3.5 rounded-xl bg-slate-900/60 border border-cyan-500/30">
+              <div className="text-cyan-300 font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5">
+                <FaEye className="text-cyan-400" /> VISUAL-TEMPORAL
               </div>
-              <div className="text-cyan-400">↓</div>
-              <div className="p-2.5 rounded-lg bg-slate-800 border border-cyan-500/40 text-slate-100 font-semibold">
-                EfficientNet-B4 Backbone
-                <div className="text-[10px] text-slate-400 mt-0.5">ImageNet Pretrained · 32 Sampled Crops</div>
+              <div className="text-cyan-400">▼</div>
+              <div className="p-2 rounded-lg bg-slate-800 border border-cyan-500/30 text-slate-200 text-[11px]">
+                32 Ordered Face Crops
               </div>
-              <div className="text-cyan-400">↓</div>
-              <div className="p-2 rounded-lg bg-cyan-950/40 border border-cyan-500/30 text-cyan-200">
-                Spatial Features: [32, 1792]
+              <div className="text-cyan-400">▼</div>
+              <div className="p-2 rounded-lg bg-slate-800 border border-cyan-500/30 text-slate-200 text-[11px]">
+                EfficientNet B4
+                <div className="text-[10px] text-slate-400">32 &times; 1792 features</div>
               </div>
-              <div className="text-blue-400">↓</div>
-              <div className="p-2.5 rounded-lg bg-slate-800 border border-blue-500/40 text-slate-100 font-semibold">
-                2-Layer LSTM Network
-                <div className="text-[10px] text-slate-400 mt-0.5">Hidden Size: 256 · Dropout: 0.20</div>
+              <div className="text-cyan-400">▼</div>
+              <div className="p-2 rounded-lg bg-slate-800 border border-cyan-500/30 text-slate-200 text-[11px]">
+                2-Layer LSTM
               </div>
-              <div className="text-blue-400">↓</div>
-              <div className="p-2 rounded-lg bg-blue-950/40 border border-blue-500/30 text-blue-200">
-                Temporal Representation: [256]
+              <div className="text-cyan-400">▼</div>
+              <div className="p-2 rounded-lg bg-cyan-950/60 border border-cyan-400/50 text-cyan-300 font-bold">
+                256 Features
               </div>
             </div>
 
-            {/* Physiological Branch */}
-            <div className="space-y-3 p-4 rounded-xl bg-slate-900/60 border border-emerald-500/30">
-              <div className="text-emerald-300 font-extrabold text-sm uppercase tracking-wider flex items-center justify-center gap-2">
-                <FaHeartbeat className="text-emerald-400" /> PHYSIOLOGICAL BRANCH
+            {/* rPPG Physiological Branch */}
+            <div className="space-y-2.5 p-3.5 rounded-xl bg-slate-900/60 border border-emerald-500/30">
+              <div className="text-emerald-300 font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5">
+                <FaHeartbeat className="text-emerald-400" /> rPPG BRANCH
               </div>
-              <div className="text-emerald-400">↓</div>
-              <div className="p-2.5 rounded-lg bg-slate-800 border border-emerald-500/40 text-slate-100 font-semibold">
-                CHROM rPPG Algorithm
-                <div className="text-[10px] text-slate-400 mt-0.5">Forehead &amp; Cheek Skin Color Variations</div>
+              <div className="text-emerald-400">▼</div>
+              <div className="p-2 rounded-lg bg-slate-800 border border-emerald-500/30 text-slate-200 text-[11px]">
+                30-Hz Skin RGB Signals
               </div>
-              <div className="text-emerald-400">↓</div>
-              <div className="p-2 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-emerald-200">
-                rPPG Pulse Vector: [240]
+              <div className="text-emerald-400">▼</div>
+              <div className="p-2 rounded-lg bg-slate-800 border border-emerald-500/30 text-slate-200 text-[11px]">
+                CHROM rPPG Filtered
+                <div className="text-[10px] text-slate-400">Hemodynamic Waveform</div>
               </div>
-              <div className="text-emerald-400">↓</div>
-              <div className="p-2.5 rounded-lg bg-slate-800 border border-emerald-500/40 text-slate-100 font-semibold">
-                1D-CNN Physiological Encoder
-                <div className="text-[10px] text-slate-400 mt-0.5">Conv1d(1→32) → Conv1d(32→64) → AdaptiveAvgPool</div>
+              <div className="text-emerald-400">▼</div>
+              <div className="p-2 rounded-lg bg-slate-800 border border-emerald-500/30 text-slate-200 text-[11px]">
+                Conv1D Network
               </div>
-              <div className="text-emerald-400">↓</div>
-              <div className="p-2 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-emerald-200">
-                Physiological Features: [64]
+              <div className="text-emerald-400">▼</div>
+              <div className="p-2 rounded-lg bg-emerald-950/60 border border-emerald-400/50 text-emerald-300 font-bold">
+                64 Features
+              </div>
+            </div>
+
+            {/* Audio-Lip Branch */}
+            <div className="space-y-2.5 p-3.5 rounded-xl bg-slate-900/60 border border-purple-500/30">
+              <div className="text-purple-300 font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5">
+                <FaBrain className="text-purple-400" /> AUDIO-LIP BRANCH
+              </div>
+              <div className="text-purple-400">▼</div>
+              <div className="p-2 rounded-lg bg-slate-800 border border-purple-500/30 text-slate-200 text-[11px]">
+                Audio 16 kHz &rarr; MFCC 40
+                <div className="text-[10px] text-slate-400">MediaPipe 20 Mouth Points</div>
+              </div>
+              <div className="text-purple-400">▼</div>
+              <div className="p-2 rounded-lg bg-slate-800 border border-purple-500/30 text-slate-200 text-[11px]">
+                Audio-Lip Joint Linear
+                <div className="text-[10px] text-slate-400">Audio 128 + Mouth 64 = 192</div>
+              </div>
+              <div className="text-purple-400">▼</div>
+              <div className="p-2 rounded-lg bg-slate-800 border border-purple-500/30 text-slate-200 text-[11px]">
+                Audio-Lip LSTM
+              </div>
+              <div className="text-purple-400">▼</div>
+              <div className="p-2 rounded-lg bg-purple-950/60 border border-purple-400/50 text-purple-300 font-bold">
+                128 Features
               </div>
             </div>
           </div>
 
-          <div className="flex justify-center text-slate-500">└────────────────────────┬────────────────────────┘</div>
-          <div className="flex justify-center text-cyan-400">↓</div>
+          <div className="flex justify-center text-slate-500">┌────────────────────────┼────────────────────────┐</div>
+          <div className="flex justify-center text-slate-400">│</div>
+          <div className="flex justify-center text-slate-400">▼</div>
 
-          {/* Fusion */}
+          {/* Independent LayerNorm */}
           <div className="text-center">
-            <div className="p-3.5 rounded-xl bg-gradient-to-r from-cyan-950/80 via-blue-950/80 to-purple-950/80 border border-cyan-400/50 text-cyan-200 max-w-xl mx-auto shadow-lg">
-              <div className="font-extrabold text-sm text-cyan-300 uppercase tracking-wider">
-                MULTIMODAL FEATURE FUSION HEAD
-              </div>
-              <div className="text-[11px] text-slate-300 mt-1">
-                Concatenation: [320] (256 visual-temporal + 64 physiological)
-              </div>
-              <div className="text-[10px] text-slate-400 mt-1">
-                Linear(320→256) → ReLU → Dropout(0.3) → Linear(256→64) → ReLU → Dropout(0.2) → Linear(64→1)
-              </div>
+            <div className="inline-block px-5 py-2 rounded-xl bg-slate-900 border border-cyan-500/40 text-cyan-200 font-semibold">
+              INDEPENDENT LAYERNORM (LN 256, LN 64, LN 128)
             </div>
           </div>
 
-          <div className="flex justify-center text-cyan-400">↓</div>
+          <div className="flex justify-center text-cyan-400">│</div>
+          <div className="flex justify-center text-cyan-400">▼</div>
 
-          {/* Output */}
+          {/* Feature Concatenation */}
           <div className="text-center">
-            <div className="inline-block px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500/20 via-cyan-500/20 to-rose-500/20 border border-cyan-400/40 font-bold text-slate-100 shadow-md">
-              FINAL FUSED DEEPFAKE PREDICTION (Logit → Sigmoid Probability)
+            <div className="inline-block px-6 py-2.5 rounded-xl bg-slate-900 border border-purple-500/50 text-purple-200 font-bold shadow-md">
+              FEATURE CONCATENATION: 256 + 64 + 128 = 448
+            </div>
+          </div>
+
+          <div className="flex justify-center text-purple-400">│</div>
+          <div className="flex justify-center text-purple-400">▼</div>
+
+          {/* Classification Multi-Layer Perceptron Head */}
+          <div className="text-center max-w-lg mx-auto space-y-2">
+            <div className="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-200">
+              FC 448 &rarr; 256 │ ReLU + Dropout (0.3)
+            </div>
+            <div className="flex justify-center text-slate-500">▼</div>
+            <div className="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-200">
+              FC 256 &rarr; 64 │ ReLU + Dropout (0.2)
+            </div>
+            <div className="flex justify-center text-slate-500">▼</div>
+            <div className="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-200">
+              FC 64 &rarr; 1 │ SIGMOID
+            </div>
+          </div>
+
+          <div className="flex justify-center text-emerald-400">│</div>
+          <div className="flex justify-center text-emerald-400">▼</div>
+
+          {/* Decision Rule */}
+          <div className="text-center">
+            <div className="inline-block px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-cyan-500/20 to-rose-500/20 border border-cyan-400/60 font-bold text-slate-100 shadow-lg">
+              <span className="text-rose-400 font-mono">P(fake) &ge; 0.5 &rarr; FAKE</span>
+              <span className="text-slate-400 mx-3">│</span>
+              <span className="text-emerald-400 font-mono">P(fake) &lt; 0.5 &rarr; REAL</span>
             </div>
           </div>
         </div>

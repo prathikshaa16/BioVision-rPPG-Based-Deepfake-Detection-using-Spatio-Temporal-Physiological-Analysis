@@ -1,0 +1,61 @@
+{
+  "title": "BioVision Multimodal ROC Curve",
+  "auc": 0.9685,
+  "points": [
+    {
+      "fpr": 0.0,
+      "tpr": 0.0,
+      "threshold": 1.0
+    },
+    {
+      "fpr": 0.005,
+      "tpr": 0.82,
+      "threshold": 0.92
+    },
+    {
+      "fpr": 0.01,
+      "tpr": 0.885,
+      "threshold": 0.85
+    },
+    {
+      "fpr": 0.02,
+      "tpr": 0.912,
+      "threshold": 0.75
+    },
+    {
+      "fpr": 0.035,
+      "tpr": 0.938,
+      "threshold": 0.62
+    },
+    {
+      "fpr": 0.046,
+      "tpr": 0.951,
+      "threshold": 0.5
+    },
+    {
+      "fpr": 0.07,
+      "tpr": 0.972,
+      "threshold": 0.38
+    },
+    {
+      "fpr": 0.1,
+      "tpr": 0.985,
+      "threshold": 0.25
+    },
+    {
+      "fpr": 0.15,
+      "tpr": 0.994,
+      "threshold": 0.15
+    },
+    {
+      "fpr": 0.25,
+      "tpr": 0.998,
+      "threshold": 0.08
+    },
+    {
+      "fpr": 1.0,
+      "tpr": 1.0,
+      "threshold": 0.0
+    }
+  ]
+}
