@@ -23,6 +23,13 @@ function pdfEscape(text: string): string {
     if (code === 0x28) out += '\\('
     else if (code === 0x29) out += '\\)'
     else if (code === 0x5c) out += '\\\\'
+    else if (ch === '—' || ch === '–') out += '-'
+    else if (ch === '×') out += 'x'
+    else if (ch === '•') out += '*'
+    else if (ch === '’' || ch === '‘') out += "'"
+    else if (ch === '“' || ch === '”') out += '"'
+    else if (ch === '…') out += '...'
+    else if (ch === '±') out += '+/-'
     else if (code >= 0x20 && code <= 0x7e) out += ch
     else if (code >= 0xa0 && code <= 0xff) out += ch
     else out += '?'
@@ -149,6 +156,7 @@ function buildReportPdf(content: ReportContent): Blob {
   addRule()
 
   for (const section of content.sections) {
+    ensureSpace(76)
     addRule()
     addText(section.title, 'F1', 12)
     addBlank(4)
@@ -156,7 +164,10 @@ function buildReportPdf(content: ReportContent): Blob {
       for (const row of section.rows) addText(`${row.label}: ${row.value}`, 'F2', 11)
     }
     if (section.paragraphs) {
-      for (const paragraph of section.paragraphs) addText(paragraph, 'F2', 11)
+      for (const paragraph of section.paragraphs) {
+        addText(paragraph, 'F2', 11)
+        addBlank(4)
+      }
     }
   }
 
@@ -330,7 +341,16 @@ export function generateVerdictReportPdf(result: AnalysisResult): Blob {
         { label: 'Fused Fake Probability', value: formatPercent(result.fake_probability) },
         { label: 'Authentic Probability', value: formatPercent(result.real_probability) },
         { label: 'Visual Anomaly Score', value: formatPercent(result.visual_fake_probability ?? result.mean_probability) },
-        { label: 'Sequence Consistency (1-StdDev)', value: formatPercent(1.0 - result.std_probability) },
+        {
+          label: 'Sequence Consistency (1-StdDev)',
+          value: formatPercent(
+            result.consistency != null
+              ? result.consistency
+              : result.std_probability != null
+              ? 1.0 - result.std_probability
+              : 1.0
+          ),
+        },
       ],
     },
     { title: 'Sequence Observation Analysis', paragraphs: buildObservationLines(result) },
