@@ -53,3 +53,25 @@ def test_cached_model_checkpoint_loads(tmp_path):
     with torch.inference_mode():
         output = loaded_model(torch.randn(1, 32, 1792), torch.randn(1, 240))
     assert output.shape == (1,)
+
+
+def test_cardiac_spectral_deployed_model():
+    """Verify production biovision_best.pt loads and executes forward pass."""
+    prod_path = 'backend/models/biovision_best.pt'
+    if not os.path.exists(prod_path):
+        return
+    loaded_model, info = load_model(device='cpu', model_type='cached', checkpoint_path=prod_path)
+    assert info['model_type'] == 'cached'
+    assert type(loaded_model).__name__ == 'BioVisionCardiacSpectral'
+    assert float(info.get('optimal_threshold', 0)) == 0.62
+    assert float(info.get('best_bal_acc', 0)) >= 0.80
+    assert float(info.get('best_val_auc', 0)) >= 0.85
+
+    with torch.inference_mode():
+        v = torch.randn(2, 32, 1792)
+        r = torch.randn(2, 240)
+        out = loaded_model(v, r)
+        assert out.shape == (2,)
+        probs = torch.sigmoid(out)
+        assert all(0.0 <= p <= 1.0 for p in probs)
+

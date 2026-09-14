@@ -199,9 +199,11 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
             else:
                 step_preds = [round(probability, 4)] * visual_features.shape[0]
 
-        if probability >= 0.60:
+        opt_thresh = float(model_info.get('optimal_threshold', 0.50))
+        margin = 0.05
+        if probability >= opt_thresh + margin:
             result = 'FAKE'
-        elif probability <= 0.40:
+        elif probability <= opt_thresh - margin:
             result = 'REAL'
         else:
             result = 'UNCERTAIN'
@@ -219,15 +221,27 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
                 'vector': rppg_vector.detach().cpu().tolist(),
             }
 
+        protocol = model_info.get('protocol', 'BioVisionCardiacSpectral')
+        if protocol == 'BioVisionCardiacSpectral':
+            model_display_name = 'BioVision Cardiac-Bandpass Spectral (0.8-2.5 Hz + PNR + BiLSTM + Attention)'
+        elif protocol == 'BioVisionPhysioSpectral':
+            model_display_name = 'BioVision Physio-Spectral Multi-Domain (BiLSTM + Multi-Scale FFT)'
+        else:
+            model_display_name = 'BioVision Spatio-Temporal + Physiological (EfficientNet-B4 + LSTM + CHROM rPPG)'
+
+        denom = max(opt_thresh, 1.0 - opt_thresh)
+        confidence = max(0.0, min(1.0, abs(probability - opt_thresh) / (denom if denom > 0 else 0.5)))
+
         return {
             'analysis_id': f"{os.path.basename(video_path)}-{int(start_time * 1000)}",
             'filename': os.path.basename(video_path),
             'status': 'completed',
             'result': result,
-            'confidence': max(0.0, min(1.0, abs(probability - 0.50) * 2.0)),
+            'confidence': round(confidence, 4),
             'fake_probability': float(probability),
             'real_probability': 1.0 - float(probability),
             'visual_fake_probability': float(probability),
+            'optimal_threshold': opt_thresh,
             'frames_sampled': 32,
             'frames_with_faces': 32,
             'frames_without_faces': 0,
@@ -235,7 +249,7 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
             'frame_predictions': step_preds,
             'mean_probability': float(probability),
             'processing_time': round(processing_time, 3),
-            'model_name': 'BioVision Spatio-Temporal + Physiological (EfficientNet-B4 + LSTM + CHROM rPPG)',
+            'model_name': model_display_name,
             'model_version': os.path.basename(str(resolved_path)),
             'model_kind': 'cached',
             'device': device,
