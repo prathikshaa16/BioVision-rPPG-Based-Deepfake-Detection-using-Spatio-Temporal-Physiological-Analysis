@@ -12,7 +12,7 @@ from .config import DEFAULT_SAMPLE_FRAMES, resolve_model_paths
 from .face_processor import FaceProcessor
 from .fusion import fuse_probabilities
 from .model import build_efficientnet_b4, load_checkpoint_into_model
-from .multimodal_model import build_cached_biovision_visual_rppg_model
+from .multimodal_model import build_cached_biovision_visual_rppg_model, build_biovision_model_from_checkpoint
 from .rppg import run_rppg_analysis
 from .video_processor import validate_video, sample_frame_indices, read_frames_by_indices
 
@@ -35,7 +35,7 @@ def load_model(device: str = None, model_type: str = None, checkpoint_path: str 
         raise FileNotFoundError(f"Model checkpoint not found at {resolved_path}")
 
     if chosen_type == 'cached':
-        model = build_cached_biovision_visual_rppg_model()
+        model = build_biovision_model_from_checkpoint(str(resolved_path))
         model.to(device)
         model, info = load_checkpoint_into_model(model, str(resolved_path), device=device)
         info['model_type'] = chosen_type
@@ -178,14 +178,26 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
             probability = torch.sigmoid(logits[0]).detach().cpu().item()
 
             # Sequence trajectory across observations
-            lstm_out, _ = model.visual_lstm(visual_features.unsqueeze(0))
-            phys_feat = model.rppg_norm(model.rppg_conv(rppg_vector.unsqueeze(0).unsqueeze(1)).squeeze(-1))
             step_preds = []
-            for t in range(visual_features.shape[0]):
-                step_vis = model.visual_norm(lstm_out[:, t, :])
-                step_fused = torch.cat((step_vis, phys_feat), dim=1)
-                step_p = torch.sigmoid(model.classifier(step_fused).view(-1)[0]).item()
-                step_preds.append(round(step_p, 4))
+            if hasattr(model, 'rppg_conv'):
+                lstm_out, _ = model.visual_lstm(visual_features.unsqueeze(0))
+                phys_feat = model.rppg_norm(model.rppg_conv(rppg_vector.unsqueeze(0).unsqueeze(1)).squeeze(-1))
+                for t in range(visual_features.shape[0]):
+                    step_vis = model.visual_norm(lstm_out[:, t, :])
+                    step_fused = torch.cat((step_vis, phys_feat), dim=1)
+                    step_p = torch.sigmoid(model.classifier(step_fused).view(-1)[0]).item()
+                    step_preds.append(round(step_p, 4))
+            elif hasattr(model, 'visual_lstm'):
+                lstm_out, _ = model.visual_lstm(visual_features.unsqueeze(0))
+                for t in range(visual_features.shape[0]):
+                    sub_vis = visual_features[:t+1].unsqueeze(0)
+                    if sub_vis.shape[1] < 2:
+                        sub_vis = torch.cat([sub_vis, sub_vis], dim=1)
+                    sub_log = model(sub_vis, rppg_vector.unsqueeze(0)).view(-1)
+                    step_p = torch.sigmoid(sub_log[0]).item()
+                    step_preds.append(round(step_p, 4))
+            else:
+                step_preds = [round(probability, 4)] * visual_features.shape[0]
 
         if probability >= 0.60:
             result = 'FAKE'

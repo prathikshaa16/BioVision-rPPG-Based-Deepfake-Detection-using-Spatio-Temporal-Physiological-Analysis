@@ -177,6 +177,152 @@ class CachedBioVisionVisualRppg(nn.Module):
         return self.classifier(fused).squeeze(1)
 
 
+class BioVisionPhysioSpectral(nn.Module):
+    """Dual-Domain Physio-Spectral Architecture with BiLSTM + Attention + rPPG FFT."""
+
+    def __init__(self, hidden_size: int = 64, dropout: float = 0.25):
+        super().__init__()
+        self.visual_lstm = nn.LSTM(
+            input_size=1792,
+            hidden_size=hidden_size,
+            num_layers=2,
+            batch_first=True,
+            bidirectional=True,
+            dropout=dropout,
+        )
+        visual_dim = hidden_size * 2
+        self.attn = nn.MultiheadAttention(embed_dim=visual_dim, num_heads=4, batch_first=True, dropout=dropout)
+        self.visual_norm = nn.LayerNorm(visual_dim * 2)
+
+        self.rppg_time_conv = nn.Sequential(
+            nn.Conv1d(1, 32, kernel_size=7, padding=3),
+            nn.BatchNorm1d(32),
+            nn.GELU(),
+            nn.Conv1d(32, 64, kernel_size=5, padding=2),
+            nn.BatchNorm1d(64),
+            nn.GELU(),
+            nn.AdaptiveAvgPool1d(1),
+        )
+        self.rppg_spectral_mlp = nn.Sequential(
+            nn.Linear(121, 64),
+            nn.BatchNorm1d(64),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(64, 64),
+            nn.GELU(),
+        )
+        self.phys_norm = nn.LayerNorm(128)
+
+        self.gate = nn.Sequential(
+            nn.Linear(visual_dim * 2 + 128, 128),
+            nn.Sigmoid(),
+        )
+
+        self.classifier = nn.Sequential(
+            nn.Linear(visual_dim * 2 + 128, 128),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(128, 64),
+            nn.GELU(),
+            nn.Dropout(dropout * 0.7),
+            nn.Linear(64, 1),
+        )
+
+    def forward(self, visual_features: torch.Tensor, rppg: torch.Tensor) -> torch.Tensor:
+        lstm_out, _ = self.visual_lstm(visual_features)
+        attn_out, _ = self.attn(lstm_out, lstm_out, lstm_out)
+        mean_p = lstm_out.mean(dim=1)
+        max_p, _ = attn_out.max(dim=1)
+        visual = self.visual_norm(torch.cat([mean_p, max_p], dim=1))
+
+        time_feat = self.rppg_time_conv(rppg.unsqueeze(1)).squeeze(-1)
+        fft_mag = torch.abs(torch.fft.rfft(rppg, dim=-1))
+        fft_feat = self.rppg_spectral_mlp(fft_mag)
+        phys = self.phys_norm(torch.cat([time_feat, fft_feat], dim=1))
+
+        gate_in = torch.cat((visual, phys), dim=1)
+        g = self.gate(gate_in)
+        gated_phys = phys * g
+
+        fused = torch.cat((visual, gated_phys), dim=1)
+        return self.classifier(fused).squeeze(-1)
+
+
+class BioVisionCardiacSpectral(nn.Module):
+    """Targeted Cardiac Bandpass (0.8-2.5 Hz / 48-150 BPM) + PNR BioVision model."""
+
+    def __init__(self, hidden_size: int = 64, dropout: float = 0.25):
+        super().__init__()
+        self.visual_lstm = nn.LSTM(
+            input_size=1792,
+            hidden_size=hidden_size,
+            num_layers=2,
+            batch_first=True,
+            bidirectional=True,
+            dropout=dropout,
+        )
+        visual_dim = hidden_size * 2
+        self.attn = nn.MultiheadAttention(embed_dim=visual_dim, num_heads=4, batch_first=True, dropout=dropout)
+        self.visual_norm = nn.LayerNorm(visual_dim * 2)
+
+        self.rppg_time_conv = nn.Sequential(
+            nn.Conv1d(1, 32, kernel_size=7, padding=3),
+            nn.BatchNorm1d(32),
+            nn.GELU(),
+            nn.Conv1d(32, 64, kernel_size=5, padding=2),
+            nn.BatchNorm1d(64),
+            nn.GELU(),
+            nn.AdaptiveAvgPool1d(1),
+        )
+        # 18 cardiac bins (0.8-2.5 Hz) + 1 PNR scalar = 19 features
+        self.cardiac_spectral_mlp = nn.Sequential(
+            nn.Linear(19, 64),
+            nn.BatchNorm1d(64),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(64, 64),
+            nn.GELU(),
+        )
+        self.phys_norm = nn.LayerNorm(128)
+
+        self.gate = nn.Sequential(
+            nn.Linear(visual_dim * 2 + 128, 128),
+            nn.Sigmoid(),
+        )
+
+        self.classifier = nn.Sequential(
+            nn.Linear(visual_dim * 2 + 128, 128),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(128, 64),
+            nn.GELU(),
+            nn.Dropout(dropout * 0.7),
+            nn.Linear(64, 1),
+        )
+
+    def forward(self, visual_features: torch.Tensor, rppg: torch.Tensor) -> torch.Tensor:
+        lstm_out, _ = self.visual_lstm(visual_features)
+        attn_out, _ = self.attn(lstm_out, lstm_out, lstm_out)
+        mean_p = lstm_out.mean(dim=1)
+        max_p, _ = attn_out.max(dim=1)
+        visual = self.visual_norm(torch.cat([mean_p, max_p], dim=1))
+
+        time_feat = self.rppg_time_conv(rppg.unsqueeze(1)).squeeze(-1)
+        fft_mag = torch.abs(torch.fft.rfft(rppg, dim=-1))
+        cardiac_band = fft_mag[:, 8:26]
+        pnr = cardiac_band.max(dim=-1, keepdim=True).values / (cardiac_band.mean(dim=-1, keepdim=True) + 1e-6)
+        spectral_in = torch.cat([cardiac_band, pnr], dim=-1)
+        cardiac_feat = self.cardiac_spectral_mlp(spectral_in)
+        phys = self.phys_norm(torch.cat([time_feat, cardiac_feat], dim=1))
+
+        gate_in = torch.cat((visual, phys), dim=1)
+        g = self.gate(gate_in)
+        gated_phys = phys * g
+
+        fused = torch.cat((visual, gated_phys), dim=1)
+        return self.classifier(fused).squeeze(-1)
+
+
 def build_biovision_multimodal_model() -> BioVisionMultimodalModel:
     return BioVisionMultimodalModel()
 
@@ -186,3 +332,24 @@ def build_biovision_visual_rppg_model() -> BioVisionVisualRppgModel:
 
 def build_cached_biovision_visual_rppg_model() -> CachedBioVisionVisualRppg:
     return CachedBioVisionVisualRppg()
+
+
+def build_biovision_model_from_checkpoint(checkpoint_path: str) -> nn.Module:
+    """Inspect checkpoint weights and instantiate the exact matching architecture."""
+    import os
+    if not os.path.exists(checkpoint_path):
+        return CachedBioVisionVisualRppg()
+
+    state = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
+    if isinstance(state, dict):
+        state_dict = state.get('model_state_dict', state.get('state_dict', state))
+    else:
+        state_dict = state
+
+    keys = set(k.replace('module.', '') for k in state_dict.keys())
+    if any('cardiac_spectral_mlp' in k for k in keys):
+        return BioVisionCardiacSpectral()
+    elif any('rppg_spectral_mlp' in k for k in keys):
+        return BioVisionPhysioSpectral()
+    else:
+        return CachedBioVisionVisualRppg()
