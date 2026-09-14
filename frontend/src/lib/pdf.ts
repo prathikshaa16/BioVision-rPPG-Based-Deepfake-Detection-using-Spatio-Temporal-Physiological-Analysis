@@ -3,9 +3,9 @@ import { buildExplanation, formatDateTime, formatDuration, formatFileSize, forma
 
 const PAGE_WIDTH = 612
 const PAGE_HEIGHT = 792
-const MARGIN = 60
+const MARGIN = 48
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2
-const BOTTOM_MARGIN = 56
+const BOTTOM_MARGIN = 44
 
 const HELVETICA_WIDTHS = [
   278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278, 278,
@@ -123,7 +123,7 @@ function buildReportPdf(content: ReportContent): Blob {
   }
 
   const addText = (text: string, font: string, size: number) => {
-    const leading = size + 6
+    const leading = size + 4
     for (const line of wrapText(text, size)) {
       ensureSpace(leading)
       ops.push(`${font} ${size} Tf`)
@@ -134,39 +134,42 @@ function buildReportPdf(content: ReportContent): Blob {
   }
 
   const addBlank = (size: number) => {
-    const leading = size + 6
+    const leading = size + 2
     ensureSpace(leading)
     y -= leading
   }
 
   const addRule = () => {
-    ensureSpace(14)
-    y -= 6
+    ensureSpace(12)
+    y -= 4
     ops.push(`0.25 g`)
     ops.push(`${MARGIN} ${y} m ${PAGE_WIDTH - MARGIN} ${y} l S`)
     ops.push(`0 g`)
-    y -= 8
+    y -= 6
   }
 
-  addText(content.title, 'F1', 20)
-  addText(content.subtitle, 'F2', 11)
-  addBlank(8)
-  addText(content.verdict, 'F1', 24)
-  addBlank(10)
+  addText(content.title, 'F1', 18)
+  addText(content.subtitle, 'F2', 10)
+  addBlank(4)
+  addText(content.verdict, 'F1', 22)
+  addBlank(6)
   addRule()
 
   for (const section of content.sections) {
-    ensureSpace(76)
+    const rowSpace = (section.rows?.length || 0) * 14
+    const paraSpace = (section.paragraphs || []).reduce((acc, p) => acc + wrapText(p, 10).length * 14 + 5, 0)
+    const neededSpace = Math.min(200, rowSpace + paraSpace + 28)
+    ensureSpace(neededSpace)
     addRule()
-    addText(section.title, 'F1', 12)
-    addBlank(4)
+    addText(section.title, 'F1', 11)
+    addBlank(2)
     if (section.rows) {
-      for (const row of section.rows) addText(`${row.label}: ${row.value}`, 'F2', 11)
+      for (const row of section.rows) addText(`${row.label}: ${row.value}`, 'F2', 10)
     }
     if (section.paragraphs) {
       for (const paragraph of section.paragraphs) {
-        addText(paragraph, 'F2', 11)
-        addBlank(4)
+        addText(paragraph, 'F2', 10)
+        addBlank(3)
       }
     }
   }
@@ -190,11 +193,13 @@ function buildReportPdf(content: ReportContent): Blob {
   }
   objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>')
   objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>')
-  for (const pageOpsEntry of pageOps) {
+  for (let i = 0; i < numPages; i++) {
+    const pageOpsEntry = pageOps[i]
     const footerOps = [
       `0.5 g`,
-      `1 0 0 1 ${MARGIN} 40 Tm`,
-      `(${pdfEscape(content.footer)}) Tj`,
+      `1 0 0 1 ${MARGIN} 28 Tm`,
+      `F2 9 Tf`,
+      `(${pdfEscape(content.footer)}  |  Page ${i + 1} of ${numPages}) Tj`,
       `0 g`,
     ]
     const contentStream = ['BT', ...pageOpsEntry, ...footerOps, 'ET'].join('\n')

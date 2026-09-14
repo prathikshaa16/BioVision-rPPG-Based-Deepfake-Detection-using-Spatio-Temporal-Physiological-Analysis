@@ -220,11 +220,9 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
         # Temporal Sequence Anomaly Aggregation:
         # In video deepfake forensics, localized temporal manipulation (e.g. face swaps, expression reenactments)
         # must not be diluted by static ending frames where motion diminishes.
-        if fake_ratio >= 0.18 or (p_max >= 0.65 and p_top_k >= 0.50):
-            visual_fake_probability = 0.65 * p_top_k + 0.35 * p_mean
-        elif fake_ratio >= 0.08 or p_max >= 0.54:
-            visual_fake_probability = 0.45 * p_top_k + 0.35 * p_mean + 0.20 * probability
-        elif p_max <= 0.40 and fake_ratio == 0.0:
+        if fake_ratio >= 0.25 or (p_max >= 0.70 and p_top_k >= 0.55):
+            visual_fake_probability = 0.60 * p_top_k + 0.40 * p_mean
+        elif p_max <= 0.45 and fake_ratio == 0.0:
             visual_fake_probability = 0.60 * probability + 0.40 * p_mean
         else:
             visual_fake_probability = 0.50 * probability + 0.50 * p_mean
@@ -247,18 +245,8 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
         squal = rppg_payload.get('signal_quality')
         rppg_status = rppg_payload.get('status', 'UNAVAILABLE')
 
-        # Run late fusion
+        # Run late fusion with physiological grounding & synthetic jitter detection
         fusion = fuse_probabilities(visual_fake_probability, rppg_payload)
-
-        # Check for physiological synthetic jitter anomaly (HR > 120 or Freq > 2.0 Hz with low SNR/quality)
-        if rppg_status == 'AVAILABLE' and squal is not None:
-            if (hr is not None and hr > 120.0) or (dfreq is not None and dfreq > 2.0):
-                if squal < 0.45:
-                    jitter_anomaly = 0.78
-                    fused_p = 0.80 * visual_fake_probability + 0.20 * jitter_anomaly
-                    fusion['rppg_anomaly_score'] = jitter_anomaly
-                    fusion['probability'] = round(fused_p, 6)
-                    fusion['method'] = 'quality-gated late fusion with physiological synthetic-jitter detection'
 
         fused_probability = float(fusion['probability'])
         real_probability = 1.0 - fused_probability
@@ -281,38 +269,36 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
             explanation = (
                 f"BioVision classified this video as FAKE with {round(confidence * 100)}% confidence "
                 f"(fused manipulation probability: {round(fused_probability * 100, 1)}%). "
-                f"Spatio-temporal analysis detected significant manipulation artifacts across {fake_cnt} of {len(step_preds)} "
-                f"sequence observations, with localized frame anomaly peaking at {round(p_max * 100, 1)}%. "
             )
-            if rppg_status == 'AVAILABLE' and hr:
-                if hr > 130 or (dfreq and dfreq > 2.2):
-                    explanation += (
-                        f"Physiological rPPG analysis extracted an abnormal heart-rate signature of {round(hr, 1)} BPM "
-                        f"(dominant frequency {round(dfreq, 2)} Hz, signal quality {round(squal * 100, 1)}%), "
-                        f"indicative of high-frequency synthetic pixel jitter typical of generative face synthesis and reenactment."
-                    )
-                else:
-                    explanation += (
-                        f"Physiological rPPG pulse consistency was degraded (quality {round(squal * 100, 1)}%), "
-                        f"corroborating synthetic manipulation across facial ROIs."
-                    )
+            if fusion.get('is_synthetic_jitter') and hr and dfreq:
+                explanation += (
+                    f"Physiological rPPG analysis extracted an abnormal high-frequency spectral spike of {round(hr, 1)} BPM "
+                    f"(dominant frequency {round(dfreq, 2)} Hz, signal quality {round((squal or 0) * 100, 1)}%), characteristic of generative synthetic pixel jitter "
+                    f"typical of frame-by-frame deepfake generation."
+                )
+            elif fake_cnt > 0:
+                explanation += (
+                    f"Spatio-temporal analysis detected significant manipulation artifacts across {fake_cnt} of {len(step_preds)} "
+                    f"sequence observations, with localized frame anomaly peaking at {round(p_max * 100, 1)}%."
+                )
             else:
                 explanation += "Visual-temporal inconsistency across facial crops indicates boundary blending and warping artifacts."
         elif result == 'REAL':
             explanation = (
                 f"BioVision classified this video as REAL with {round(confidence * 100)}% confidence "
                 f"(authenticity probability: {round(real_probability * 100, 1)}%). "
-                f"Facial spatio-temporal representations exhibited high coherence (sequence consistency {round(consistency * 100, 1)}%) "
-                f"with no sustained manipulation signatures across the {len(step_preds)} sampled observations. "
             )
-            if rppg_status == 'AVAILABLE' and hr:
+            if fusion.get('is_authentic_cardiac') and hr and dfreq:
                 explanation += (
-                    f"Physiological blood volume pulse dynamics remained stable with an estimated heart rate of {round(hr, 1)} BPM "
-                    f"(dominant frequency {round(dfreq, 2)} Hz, signal quality {round(squal * 100, 1)}%), "
-                    f"consistent with genuine biological blood flow."
+                    f"Physiological rPPG analysis recovered a stable, authentic biological blood volume pulse at {round(hr, 1)} BPM "
+                    f"({round(dfreq, 2)} Hz, signal quality {round((squal or 0) * 100, 1)}%), confirming genuine human subcutaneous blood flow "
+                    f"and ruling out synthetic face replacement."
                 )
             else:
-                explanation += "No synthetic reenactment or face replacement boundaries were detected."
+                explanation += (
+                    f"Facial spatio-temporal representations exhibited high coherence (sequence consistency {round(consistency * 100, 1)}%) "
+                    f"with no sustained manipulation signatures across the {len(step_preds)} sampled observations."
+                )
         else:
             explanation = (
                 f"BioVision classified this video as UNCERTAIN (fused probability {round(fused_probability * 100, 1)}%). "
