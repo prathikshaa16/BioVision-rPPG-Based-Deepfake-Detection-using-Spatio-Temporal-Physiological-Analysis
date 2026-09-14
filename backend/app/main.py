@@ -35,7 +35,9 @@ async def evaluation_metrics(dataset: str = Query(default='celebdf', description
     """Return preserved official evaluation artifacts for the UI."""
     results_dir = BASE_DIR.parent / 'results'
     if dataset.lower() in ('dfd', 'dfdc'):
-        dfd_path = results_dir / 'dfd_evaluation_metrics.json'
+        dfd_path = results_dir / 'dfd_multi_harmonic_metrics.json'
+        if not dfd_path.exists():
+            dfd_path = results_dir / 'dfd_evaluation_metrics.json'
         if dfd_path.exists():
             dfd_m = json.loads(dfd_path.read_text(encoding='utf-8'))
             return {
@@ -43,10 +45,10 @@ async def evaluation_metrics(dataset: str = Query(default='celebdf', description
                 'dataset': 'dfd',
                 'roc': [],
                 'confusion_matrix': [
-                    {'actual': 'REAL', 'predicted': 'REAL', 'count': dfd_m.get('true_negatives', 46)},
+                    {'actual': 'REAL', 'predicted': 'REAL', 'count': dfd_m.get('true_negatives', 65)},
                     {'actual': 'REAL', 'predicted': 'FAKE', 'count': dfd_m.get('false_positives', 8)},
-                    {'actual': 'FAKE', 'predicted': 'REAL', 'count': dfd_m.get('false_negatives', 64)},
-                    {'actual': 'FAKE', 'predicted': 'FAKE', 'count': dfd_m.get('true_positives', 224)},
+                    {'actual': 'FAKE', 'predicted': 'REAL', 'count': dfd_m.get('false_negatives', 296)},
+                    {'actual': 'FAKE', 'predicted': 'FAKE', 'count': dfd_m.get('true_positives', 634)},
                 ]
             }
 
