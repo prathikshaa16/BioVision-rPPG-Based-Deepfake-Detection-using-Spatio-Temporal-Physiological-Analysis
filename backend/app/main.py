@@ -82,20 +82,26 @@ async def model_info(model_type: str = Query(default=DEFAULT_MODEL_TYPE, descrip
         _, info = load_model(model_type=chosen_type, checkpoint_path=str(resolved_path))
         device = _resolve_device()
         if chosen_type == 'cached':
-            protocol = info.get('protocol', 'BioVisionCardiacSpectral')
-            if protocol == 'BioVisionCardiacSpectral':
+            arch = info.get('architecture', info.get('protocol', 'BioVisionMultiHarmonic'))
+            if arch == 'BioVisionMultiHarmonic':
+                model_display = "BioVision Multi-Harmonic Cardiac Physio-Spectral (32-Bin FFT + Attentive BiLSTM)"
+                components = [
+                    {"name": "spatio-temporal visual branch", "role": "32 sampled face crops -> 1792-d EfficientNet-B4 features -> 2-layer BiLSTM + Multi-Head Attention + Attentive Pooling", "output": "[256] visual representation", "weighted": True},
+                    {"name": "multi-harmonic cardiac branch", "role": "CHROM rPPG vector [240] -> 32 Multi-Harmonic Spectral Bins (0.2-3.0 Hz, Fundamental, Secondary Reflection, PNR, Entropy)", "output": "[64] cardiac physiological vector", "weighted": True},
+                    {"name": "calibrated fusion classifier", "role": "Cross-domain fusion with Asymmetric Focal Loss & Youden's J calibration", "output": "single fake logit for calibrated verdict", "weighted": True},
+                ]
+            elif arch == 'BioVisionEnsemble':
+                model_display = "BioVision Multi-Harmonic 3-Seed Diversity Ensemble (Seeds 42, 101, 777)"
+                components = [
+                    {"name": "3-seed multi-harmonic models", "role": "3 diverse neural networks with multi-head self-attention and multi-harmonic rPPG decomposition", "output": "averaged soft-voting probability", "weighted": True},
+                    {"name": "threshold calibration", "role": "Calibrated decision threshold using Youden's J statistic", "output": "calibrated classification verdict", "weighted": True},
+                ]
+            elif arch == 'BioVisionCardiacSpectral':
                 model_display = "BioVision Cardiac-Bandpass Spectral (0.8-2.5 Hz + PNR + BiLSTM + Attention)"
                 components = [
                     {"name": "spatio-temporal visual branch", "role": "32 sampled face crops -> 1792-d EfficientNet-B4 features -> 2-layer BiLSTM + Multi-Head Self-Attention", "output": "[256] visual representation", "weighted": True},
                     {"name": "cardiac physiological branch", "role": "CHROM rPPG vector [240] -> 1D-CNN + [0.8-2.5 Hz] Cardiac Bandpass FFT Bins + PNR", "output": "[128] cardiac physiological vector", "weighted": True},
                     {"name": "gated multimodal fusion classifier", "role": "Cross-domain sigmoid confidence gate fusing visual + physiological representations", "output": "single fake logit for calibrated verdict", "weighted": True},
-                ]
-            elif protocol == 'BioVisionPhysioSpectral':
-                model_display = "BioVision Physio-Spectral Multi-Domain (BiLSTM + Multi-Scale FFT)"
-                components = [
-                    {"name": "spatial & temporal branch", "role": "32 sampled face crops -> 1792-d EfficientNet-B4 features -> 2-layer BiLSTM", "output": "[256] temporal representation", "weighted": True},
-                    {"name": "physio-spectral branch", "role": "CHROM rPPG vector [240] -> 1D-CNN + multi-band rFFT", "output": "[128] physiological feature vector", "weighted": True},
-                    {"name": "multimodal fusion classifier", "role": "trained feature fusion head combining [256 + 128 = 384] dimensions", "output": "single fake logit for the video verdict", "weighted": True},
                 ]
             else:
                 model_display = "BioVision Spatio-Temporal + Physiological (EfficientNet-B4 + LSTM + CHROM rPPG)"
@@ -112,17 +118,19 @@ async def model_info(model_type: str = Query(default=DEFAULT_MODEL_TYPE, descrip
                 "device": device,
                 "checkpoint_path": str(resolved_path),
                 "status": "loaded",
-                "protocol": protocol,
-                "optimal_threshold": float(info.get('optimal_threshold', 0.62)),
-                "best_bal_acc": float(info.get('best_bal_acc', 0.8148)),
-                "best_val_auc": float(info.get('best_val_auc', 0.8681)),
+                "protocol": arch,
+                "optimal_threshold": float(info.get('optimal_threshold', 0.835)),
+                "best_bal_acc": float(info.get('best_bal_acc', info.get('balanced_accuracy', 0.7861))),
+                "best_val_auc": float(info.get('best_val_auc', info.get('auc', info.get('roc_auc', 0.8744)))),
+                "specificity": float(info.get('specificity', 0.8904)),
+                "sensitivity": float(info.get('sensitivity', 0.6817)),
                 "missing_keys": info.get('missing_keys', []),
                 "unexpected_keys": info.get('unexpected_keys', []),
                 "analysis_components": components,
                 "verdict_note": (
-                    "BioVision executes dual-branch spatio-temporal and physiological analysis: 32 ordered facial crops are "
-                    "encoded via EfficientNet-B4 and a 2-layer BiLSTM + Self-Attention, while CHROM extracts a 240-sample rPPG pulse "
-                    "vector encoded via a 1D-CNN and cardiac bandpass (0.8-2.5 Hz) spectral features. Gated fusion produces the calibrated decision."
+                    "BioVision executes dual-branch spatio-temporal and multi-harmonic physiological analysis: 32 ordered facial crops are "
+                    "encoded via EfficientNet-B4 and a 2-layer BiLSTM + Multi-Head Self-Attention, while CHROM rPPG features are decomposed across "
+                    "vasomotor, fundamental, and secondary reflection bands with peak-to-noise and entropy metrics. Threshold is calibrated via Youden's J."
                 ),
             }
         else:

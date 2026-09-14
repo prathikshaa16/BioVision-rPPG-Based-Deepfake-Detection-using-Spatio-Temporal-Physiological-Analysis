@@ -38,6 +38,14 @@ def load_checkpoint_into_model(model: torch.nn.Module, checkpoint_path: str, dev
     else:
         state_dict = state
 
+    # If the model is already an ensemble instantiated from model_states, return it directly
+    if hasattr(model, 'models') and isinstance(state, dict) and 'model_states' in state:
+        info = {'missing_keys': [], 'unexpected_keys': []}
+        for meta_k in ('optimal_threshold', 'balanced_accuracy', 'best_bal_acc', 'roc_auc', 'auc', 'specificity', 'sensitivity', 'architecture', 'seeds'):
+            if meta_k in state:
+                info[meta_k] = state[meta_k]
+        return model, info
+
     # Some checkpoints may include a 'module.' prefix; strip it without silently renaming anything else.
     new_state = {}
     for k, v in state_dict.items():
@@ -48,7 +56,7 @@ def load_checkpoint_into_model(model: torch.nn.Module, checkpoint_path: str, dev
         model.load_state_dict(new_state, strict=True)
         info = {'missing_keys': [], 'unexpected_keys': []}
         if isinstance(state, dict):
-            for meta_k in ('optimal_threshold', 'best_bal_acc', 'best_val_auc', 'protocol', 'epoch'):
+            for meta_k in ('optimal_threshold', 'best_bal_acc', 'balanced_accuracy', 'best_val_auc', 'auc', 'roc_auc', 'specificity', 'sensitivity', 'protocol', 'epoch', 'architecture'):
                 if meta_k in state:
                     info[meta_k] = state[meta_k]
         return model, info

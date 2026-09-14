@@ -187,8 +187,7 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
                     step_fused = torch.cat((step_vis, phys_feat), dim=1)
                     step_p = torch.sigmoid(model.classifier(step_fused).view(-1)[0]).item()
                     step_preds.append(round(step_p, 4))
-            elif hasattr(model, 'visual_lstm'):
-                lstm_out, _ = model.visual_lstm(visual_features.unsqueeze(0))
+            elif hasattr(model, 'visual_lstm') or hasattr(model, 'bilstm'):
                 for t in range(visual_features.shape[0]):
                     sub_vis = visual_features[:t+1].unsqueeze(0)
                     if sub_vis.shape[1] < 2:
@@ -221,10 +220,14 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
                 'vector': rppg_vector.detach().cpu().tolist(),
             }
 
-        protocol = model_info.get('protocol', 'BioVisionCardiacSpectral')
-        if protocol == 'BioVisionCardiacSpectral':
+        arch = model_info.get('architecture', model_info.get('protocol', 'BioVisionMultiHarmonic'))
+        if arch == 'BioVisionMultiHarmonic':
+            model_display_name = 'BioVision Multi-Harmonic Cardiac Physio-Spectral (32-Bin FFT + Attentive BiLSTM)'
+        elif arch == 'BioVisionEnsemble':
+            model_display_name = 'BioVision Multi-Harmonic 3-Seed Diversity Ensemble'
+        elif arch == 'BioVisionCardiacSpectral':
             model_display_name = 'BioVision Cardiac-Bandpass Spectral (0.8-2.5 Hz + PNR + BiLSTM + Attention)'
-        elif protocol == 'BioVisionPhysioSpectral':
+        elif arch == 'BioVisionPhysioSpectral':
             model_display_name = 'BioVision Physio-Spectral Multi-Domain (BiLSTM + Multi-Scale FFT)'
         else:
             model_display_name = 'BioVision Spatio-Temporal + Physiological (EfficientNet-B4 + LSTM + CHROM rPPG)'
