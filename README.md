@@ -194,7 +194,7 @@ This checks the `[32,1792]` visual embedding sequence, `[240]` rPPG input,
 ## Installation
 ```bash
 # Clone the repository
-git clone https://github.com/suba-6/BioVision-rPPG-Based-deepfake-detection-system.git
+git clone https://github.com/prathikshaa16/BioVision-rPPG-Based-Deepfake-Detection-using-Spatio-Temporal-Physiological-Analysis
 
 # Backend setup
 cd backend
