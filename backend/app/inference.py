@@ -13,6 +13,7 @@ from .face_processor import FaceProcessor
 from .fusion import fuse_probabilities
 from .model import build_efficientnet_b4, load_checkpoint_into_model
 from .multimodal_model import build_cached_biovision_visual_rppg_model, build_biovision_model_from_checkpoint
+from .audio_lip import extract_audio_track, compute_mfcc, extract_mouth_landmarks, analyze_audio_lip_correspondence
 from .rppg import run_rppg_analysis
 from .video_processor import validate_video, sample_frame_indices, read_frames_by_indices
 
@@ -56,13 +57,16 @@ def load_model(device: str = None, model_type: str = None, checkpoint_path: str 
     return model, info
 
 
-def _prepare_cached_visual_features(video_path: str, device: str = 'cpu', n_frames: int = 32) -> torch.Tensor:
-    """Create the notebook-compatible visual feature tensor [32, 1792]."""
+def _prepare_cached_visual_features(video_path: str, device: str = 'cpu', n_frames: int = 32):
+    """Create the visual feature tensor [32, 1792] and return selected face frames and bounding boxes."""
     meta = validate_video(video_path)
     indices = sample_frame_indices(meta['frame_count'], n_samples=n_frames)
     frames = read_frames_by_indices(video_path, indices)
     fp = FaceProcessor(device=device)
     face_tensors: List[torch.Tensor] = []
+    selected_frames: List[np.ndarray] = []
+    selected_boxes: List[Tuple[int, int, int, int]] = []
+
     for frame in frames:
         if frame is None:
             continue
@@ -75,6 +79,8 @@ def _prepare_cached_visual_features(video_path: str, device: str = 'cpu', n_fram
             continue
         largest_crop = max(crop, key=lambda item: item.size[0] * item.size[1])
         face_tensors.append(largest_crop)
+        selected_frames.append(frame)
+        selected_boxes.append(largest_box)
 
     if not face_tensors:
         raise ValueError('NO_FACE_DETECTED')
@@ -85,8 +91,12 @@ def _prepare_cached_visual_features(video_path: str, device: str = 'cpu', n_fram
     if batch.shape[0] < n_frames:
         pad = n_frames - batch.shape[0]
         batch = torch.cat([batch, batch[-1:].repeat(pad, 1, 1, 1)], dim=0)
+        selected_frames = selected_frames + [selected_frames[-1]] * pad
+        selected_boxes = selected_boxes + [selected_boxes[-1]] * pad
     if batch.shape[0] > n_frames:
         batch = batch[:n_frames]
+        selected_frames = selected_frames[:n_frames]
+        selected_boxes = selected_boxes[:n_frames]
 
     backbone = models.efficientnet_b4(weights=weights)
     backbone = backbone.to(device)
@@ -95,7 +105,7 @@ def _prepare_cached_visual_features(video_path: str, device: str = 'cpu', n_fram
         features = backbone.features(batch)
         features = backbone.avgpool(features)
         features = torch.flatten(features, 1)
-    return features.to(device)
+    return features.to(device), selected_frames, selected_boxes
 
 
 def _prepare_cached_rppg_vector(video_path: str, meta: Dict[str, Any], device: str = 'cpu', size: int = 240):
@@ -133,7 +143,7 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
         except Exception as exc:
             raise ValueError(f"Invalid video file: {exc}") from exc
         try:
-            visual_features = _prepare_cached_visual_features(video_path, device=device, n_frames=32)
+            visual_features, selected_frames, selected_boxes = _prepare_cached_visual_features(video_path, device=device, n_frames=32)
         except ValueError as exc:
             if 'NO_FACE_DETECTED' in str(exc):
                 processing_time = time.time() - start_time
@@ -245,8 +255,14 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
         squal = rppg_payload.get('signal_quality')
         rppg_status = rppg_payload.get('status', 'UNAVAILABLE')
 
-        # Run late fusion with physiological grounding & synthetic jitter detection
-        fusion = fuse_probabilities(visual_fake_probability, rppg_payload)
+        # Extract Audio-Lip features
+        mouth_landmarks = extract_mouth_landmarks(selected_frames, selected_boxes, n_steps=32)
+        audio_array, has_audio, audio_status = extract_audio_track(video_path)
+        mfcc_vector = compute_mfcc(audio_array, sr=16000, n_steps=32)
+        audio_lip_data = analyze_audio_lip_correspondence(audio_array, mouth_landmarks, fps=meta.get('fps', 30.0))
+
+        # Run tri-modal fusion with physiological grounding & audio-lip phoneme-viseme synchrony
+        fusion = fuse_probabilities(visual_fake_probability, rppg_payload, audio_lip=audio_lip_data)
 
         fused_probability = float(fusion['probability'])
         real_probability = 1.0 - fused_probability
@@ -283,6 +299,11 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
                 )
             else:
                 explanation += "Visual-temporal inconsistency across facial crops indicates boundary blending and warping artifacts."
+            if fusion.get('is_audio_lip_desynchronized'):
+                explanation += (
+                    f" Audio-lip analysis detected significant temporal desynchronization ({audio_lip_data['temporal_offset_ms']} ms offset, "
+                    f"synchrony score {round(audio_lip_data['speech_lip_sync_score'] * 100, 1)}%), revealing artificial lip dubbing or speech-reenactment manipulation."
+                )
         elif result == 'REAL':
             explanation = (
                 f"BioVision classified this video as REAL with {round(confidence * 100)}% confidence "
@@ -298,6 +319,11 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
                 explanation += (
                     f"Facial spatio-temporal representations exhibited high coherence (sequence consistency {round(consistency * 100, 1)}%) "
                     f"with no sustained manipulation signatures across the {len(step_preds)} sampled observations."
+                )
+            if fusion.get('is_audio_lip_synchronized'):
+                explanation += (
+                    f" Audio-lip analysis confirmed natural phoneme-viseme temporal synchrony (offset {audio_lip_data['temporal_offset_ms']} ms, "
+                    f"correlation r={round(audio_lip_data['correlation'], 3)}), verifying authentic speech articulation."
                 )
         else:
             explanation = (
@@ -352,9 +378,12 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
             'model_load_info': model_info,
             'meta': meta,
             'rppg': rppg_payload,
+            'audio_lip': audio_lip_data,
             'cached_features': {
                 'visual_shape': [int(visual_features.shape[0]), int(visual_features.shape[1])],
                 'rppg_shape': [int(rppg_vector.shape[0])],
+                'audio_mfcc_shape': [int(mfcc_vector.shape[0]), int(mfcc_vector.shape[1])],
+                'mouth_landmarks_shape': [int(mouth_landmarks.shape[0]), int(mouth_landmarks.shape[1])],
             },
         }
 
@@ -488,10 +517,21 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
     # Consistency: 1 - std, clamped to [0, 1]. A low spread means consistent evidence.
     consistency = max(0.0, min(1.0, 1.0 - std_probability))
 
-    # Run both evidence channels before deciding so the verdict reflects the
-    # quality-gated late fusion rather than a diagnostic-only side channel.
+    # Run visual, physiological, and audio-lip evidence channels
     rppg = run_rppg_analysis(video_path, meta, device=device)
-    fusion = fuse_probabilities(visual_mean_probability, rppg)
+
+    # Extract audio-lip correspondence features
+    audio_array, has_audio, audio_status = extract_audio_track(video_path)
+    detected_frames = [frames[i] for i, item in enumerate(frame_results) if item['faces'] > 0 and frames[i] is not None]
+    detected_boxes = [
+        (item['boxes'][0]['x'], item['boxes'][0]['y'], item['boxes'][0]['x'] + item['boxes'][0]['w'], item['boxes'][0]['y'] + item['boxes'][0]['h'])
+        if item.get('boxes') else (0, 0, 100, 100)
+        for item in frame_results if item['faces'] > 0
+    ]
+    mouth_landmarks = extract_mouth_landmarks(detected_frames, detected_boxes, n_steps=len(indices))
+    audio_lip_data = analyze_audio_lip_correspondence(audio_array, mouth_landmarks, fps=meta.get('fps', 30.0))
+
+    fusion = fuse_probabilities(visual_mean_probability, rppg, audio_lip=audio_lip_data)
     mean_probability = float(fusion['probability'])
 
     if mean_probability >= 0.60:
@@ -540,4 +580,5 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
         'frame_results': frame_results,
         'batch_tensor_shape': [batch.shape[0], batch.shape[1], batch.shape[2], batch.shape[3]],
         'rppg': rppg,
+        'audio_lip': audio_lip_data,
     }

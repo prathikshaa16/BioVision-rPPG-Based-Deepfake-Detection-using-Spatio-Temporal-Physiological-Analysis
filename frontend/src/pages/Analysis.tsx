@@ -248,7 +248,7 @@ export default function Analysis() {
           <div className="flex-1">
             <p className="text-rose-200 font-semibold">Analysis server is unavailable</p>
             <p className="text-rose-300/80 text-sm mt-1">
-              The FastAPI backend is not responding on <code className="text-rose-200 bg-rose-500/15 px-1.5 py-0.5 rounded font-mono text-xs">http://127.0.0.1:8000</code>.
+              The FastAPI backend is not responding on <code className="text-rose-200 bg-rose-500/15 px-1.5 py-0.5 rounded font-mono text-xs">{API_BASE || 'http://127.0.0.1:8000'}</code>.
               Start it from the project root with:
             </p>
             <code className="inline-block mt-2 px-3 py-1.5 rounded-lg bg-black/40 border border-rose-400/30 font-mono text-xs text-rose-200">

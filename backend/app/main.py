@@ -136,12 +136,14 @@ async def model_info(model_type: str = Query(default=DEFAULT_MODEL_TYPE, descrip
                 components = [
                     {"name": "spatio-temporal visual branch", "role": "32 sampled face crops -> 1792-d EfficientNet-B4 features -> 2-layer BiLSTM + Multi-Head Attention + Attentive Pooling", "output": "[256] visual representation", "weighted": True},
                     {"name": "multi-harmonic cardiac branch", "role": "CHROM rPPG vector [240] -> 32 Multi-Harmonic Spectral Bins (0.2-3.0 Hz, Fundamental, Secondary Reflection, PNR, Entropy)", "output": "[64] cardiac physiological vector", "weighted": True},
-                    {"name": "calibrated fusion classifier", "role": "Cross-domain fusion with Asymmetric Focal Loss & Youden's J calibration", "output": "single fake logit for calibrated verdict", "weighted": True},
+                    {"name": "audio-lip correspondence branch", "role": "Audio 16 kHz -> 40-bin MFCC + MediaPipe 20-point mouth landmarks -> BiLSTM phoneme-viseme correlation", "output": "[128] audiovisual synchrony vector", "weighted": True},
+                    {"name": "calibrated multimodal fusion classifier", "role": "Cross-domain tri-modal fusion with Asymmetric Focal Loss & Youden's J calibration (256 + 64 + 128 = 448 features)", "output": "single fake logit for calibrated verdict", "weighted": True},
                 ]
             elif arch == 'BioVisionEnsemble':
                 model_display = "BioVision Multi-Harmonic 3-Seed Diversity Ensemble (Seeds 42, 101, 777)"
                 components = [
                     {"name": "3-seed multi-harmonic models", "role": "3 diverse neural networks with multi-head self-attention and multi-harmonic rPPG decomposition", "output": "averaged soft-voting probability", "weighted": True},
+                    {"name": "audio-lip correspondence branch", "role": "Audio 16 kHz -> 40-bin MFCC + MediaPipe 20-point mouth landmarks -> BiLSTM phoneme-viseme correlation", "output": "[128] audiovisual synchrony vector", "weighted": True},
                     {"name": "threshold calibration", "role": "Calibrated decision threshold using Youden's J statistic", "output": "calibrated classification verdict", "weighted": True},
                 ]
             elif arch == 'BioVisionCardiacSpectral':
@@ -149,14 +151,16 @@ async def model_info(model_type: str = Query(default=DEFAULT_MODEL_TYPE, descrip
                 components = [
                     {"name": "spatio-temporal visual branch", "role": "32 sampled face crops -> 1792-d EfficientNet-B4 features -> 2-layer BiLSTM + Multi-Head Self-Attention", "output": "[256] visual representation", "weighted": True},
                     {"name": "cardiac physiological branch", "role": "CHROM rPPG vector [240] -> 1D-CNN + [0.8-2.5 Hz] Cardiac Bandpass FFT Bins + PNR", "output": "[128] cardiac physiological vector", "weighted": True},
-                    {"name": "gated multimodal fusion classifier", "role": "Cross-domain sigmoid confidence gate fusing visual + physiological representations", "output": "single fake logit for calibrated verdict", "weighted": True},
+                    {"name": "audio-lip correspondence branch", "role": "Audio 16 kHz -> 40-bin MFCC + MediaPipe 20-point mouth landmarks -> BiLSTM phoneme-viseme correlation", "output": "[128] audiovisual synchrony vector", "weighted": True},
+                    {"name": "gated multimodal fusion classifier", "role": "Cross-domain sigmoid confidence gate fusing visual + physiological + audio-lip representations", "output": "single fake logit for calibrated verdict", "weighted": True},
                 ]
             else:
                 model_display = "BioVision Spatio-Temporal + Physiological (EfficientNet-B4 + LSTM + CHROM rPPG)"
                 components = [
                     {"name": "spatial & temporal branch", "role": "32 sampled face crops -> 1792-d EfficientNet-B4 features -> 2-layer LSTM", "output": "[256] temporal representation", "weighted": True},
                     {"name": "physiological branch", "role": "contiguous skin ROI color variations -> CHROM rPPG vector [240] -> 1D-CNN", "output": "[64] physiological feature vector", "weighted": True},
-                    {"name": "multimodal fusion classifier", "role": "trained feature fusion head combining [256 + 64 = 320] dimensions", "output": "single fake logit for the video verdict", "weighted": True},
+                    {"name": "audio-lip correspondence branch", "role": "Audio 16 kHz -> 40-bin MFCC + MediaPipe 20-point mouth landmarks -> BiLSTM phoneme-viseme correlation", "output": "[128] audiovisual synchrony vector", "weighted": True},
+                    {"name": "multimodal fusion classifier", "role": "trained feature fusion head combining [256 + 64 + 128 = 448] dimensions", "output": "single fake logit for the video verdict", "weighted": True},
                 ]
 
             payload = {
@@ -176,9 +180,10 @@ async def model_info(model_type: str = Query(default=DEFAULT_MODEL_TYPE, descrip
                 "unexpected_keys": info.get('unexpected_keys', []),
                 "analysis_components": components,
                 "verdict_note": (
-                    "BioVision executes dual-branch spatio-temporal and multi-harmonic physiological analysis: 32 ordered facial crops are "
-                    "encoded via EfficientNet-B4 and a 2-layer BiLSTM + Multi-Head Self-Attention, while CHROM rPPG features are decomposed across "
-                    "vasomotor, fundamental, and secondary reflection bands with peak-to-noise and entropy metrics. Threshold is calibrated via Youden's J."
+                    "BioVision executes tri-modal spatio-temporal, multi-harmonic physiological, and audio-lip correspondence analysis: "
+                    "32 ordered facial crops are encoded via EfficientNet-B4 and a 2-layer BiLSTM + Multi-Head Self-Attention, CHROM rPPG features are decomposed across "
+                    "vasomotor, fundamental, and secondary reflection bands, and speech acoustic envelopes are cross-correlated against mouth landmark articulation "
+                    "to detect deepfakes, synthetic dubbing, and generator jitter. Threshold is calibrated via Youden's J."
                 ),
             }
         else:

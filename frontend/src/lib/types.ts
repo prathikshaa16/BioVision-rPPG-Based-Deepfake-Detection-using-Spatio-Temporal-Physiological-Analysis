@@ -61,14 +61,38 @@ export interface RppgData {
   window: RppgWindow | null
 }
 
+export interface AudioLipData {
+  status: 'AVAILABLE' | 'UNAVAILABLE' | 'SILENT' | 'NO_AUDIO' | 'SKIPPED'
+  has_audio: boolean
+  speech_lip_sync_score: number
+  temporal_offset_ms: number
+  correlation: number
+  audio_lip_anomaly_score: number
+  confidence: number
+  is_synchronized: boolean
+  is_desynchronized: boolean
+  explanation?: string
+  aperture_waveform?: number[]
+  audio_energy_waveform?: number[]
+  feature_dim?: number
+}
+
 export interface FusionData {
   probability: number
   visual_probability: number
   rppg_anomaly_score: number | null
   rppg_quality: number | null
+  audio_lip_anomaly_score?: number | null
+  audio_lip_sync_score?: number | null
   visual_weight: number
   rppg_weight: number
+  audio_lip_weight?: number
   method: string
+  is_authentic_cardiac?: boolean
+  is_synthetic_jitter?: boolean
+  is_audio_lip_synchronized?: boolean
+  is_audio_lip_desynchronized?: boolean
+  modalities_used?: string[]
 }
 
 export interface VideoMeta {
@@ -120,6 +144,7 @@ export interface AnalysisResult {
   sampled_indices?: number[]
   frame_overlays?: FrameOverlay[]
   rppg?: RppgData
+  audio_lip?: AudioLipData
   fusion?: FusionData
 }
 

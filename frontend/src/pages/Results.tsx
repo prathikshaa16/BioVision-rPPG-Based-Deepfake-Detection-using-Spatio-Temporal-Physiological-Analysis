@@ -31,6 +31,8 @@ import {
   FaCheck,
   FaFingerprint,
   FaFileAlt,
+  FaMicrophone,
+  FaVolumeMute,
 } from 'react-icons/fa'
 
 interface ResultTheme {
@@ -614,34 +616,152 @@ export default function Results() {
           </div>
         </Card>
 
-        {/* D. QUALITY-GATED FUSION */}
+        {/* D. AUDIO-LIP CORRESPONDENCE & PHONEME-VISEME SYNCHRONY */}
         <Card
-          title="D. Quality-Gated Multimodal Fusion"
-          subtitle="Late fusion combines visual-temporal dynamics with quality-aware physiological evidence"
+          title="D. Audio-Lip Correspondence & Speech Synchrony"
+          subtitle="Cross-modal phoneme-viseme temporal correlation detecting speech dubbing and reenactment"
+          action={
+            result.audio_lip?.status === 'AVAILABLE' ? (
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono border ${
+                result.audio_lip.is_synchronized
+                  ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
+                  : result.audio_lip.is_desynchronized
+                  ? 'bg-rose-950/60 border-rose-500/40 text-rose-300'
+                  : 'bg-cyan-950/60 border-cyan-500/40 text-cyan-300'
+              }`}>
+                <FaMicrophone className="w-3.5 h-3.5" />
+                {result.audio_lip.is_synchronized ? 'Synchronized (< 80ms offset)' : result.audio_lip.is_desynchronized ? 'Desynchronized Dubbing' : 'Audiovisual Aligned'}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono bg-slate-900 border border-slate-700 text-slate-400">
+                <FaVolumeMute className="w-3.5 h-3.5" />
+                {result.audio_lip?.status === 'SILENT' ? 'Silent Audio' : 'No Audio Stream'}
+              </span>
+            )
+          }
+        >
+          {result.audio_lip?.status === 'AVAILABLE' ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="glass-inset p-3.5">
+                  <div className="text-[11px] font-mono text-slate-400 uppercase">Synchrony Index</div>
+                  <div className={`text-2xl font-bold mt-1 ${result.audio_lip.is_synchronized ? 'text-emerald-400' : result.audio_lip.is_desynchronized ? 'text-rose-400' : 'text-slate-100'}`}>
+                    {formatPercent(result.audio_lip.speech_lip_sync_score, 1)}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-0.5">Phoneme-viseme match</div>
+                </div>
+
+                <div className="glass-inset p-3.5">
+                  <div className="text-[11px] font-mono text-slate-400 uppercase">Temporal Offset</div>
+                  <div className={`text-2xl font-bold mt-1 ${Math.abs(result.audio_lip.temporal_offset_ms) <= 80 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {result.audio_lip.temporal_offset_ms > 0 ? `+${result.audio_lip.temporal_offset_ms}` : result.audio_lip.temporal_offset_ms} ms
+                  </div>
+                  <div className="text-xs text-slate-500 mt-0.5">Cross-correlation lag</div>
+                </div>
+
+                <div className="glass-inset p-3.5">
+                  <div className="text-[11px] font-mono text-slate-400 uppercase">Correlation (r)</div>
+                  <div className="text-2xl font-bold text-cyan-300 mt-1">
+                    {result.audio_lip.correlation.toFixed(3)}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-0.5">Aperture vs Energy</div>
+                </div>
+
+                <div className="glass-inset p-3.5">
+                  <div className="text-[11px] font-mono text-slate-400 uppercase">Anomaly Score</div>
+                  <div className={`text-2xl font-bold mt-1 ${result.audio_lip.audio_lip_anomaly_score >= 0.50 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                    {formatPercent(result.audio_lip.audio_lip_anomaly_score, 1)}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-0.5">Desync evidence</div>
+                </div>
+              </div>
+
+              {/* Aperture vs Energy trajectory */}
+              {result.audio_lip.aperture_waveform && result.audio_lip.audio_energy_waveform && (
+                <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between text-xs font-mono text-slate-400">
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block"></span> Vertical Lip Aperture Trajectory</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-purple-400 inline-block"></span> 16 kHz Audio RMS Energy Envelope</span>
+                  </div>
+                  <div className="h-28 w-full flex items-end gap-1 pt-2">
+                    {result.audio_lip.aperture_waveform.map((ap, idx) => {
+                      const en = result.audio_lip?.audio_energy_waveform?.[idx] || 0
+                      const maxAp = Math.max(...(result.audio_lip?.aperture_waveform || [1])) || 1
+                      const maxEn = Math.max(...(result.audio_lip?.audio_energy_waveform || [1])) || 1
+                      const apHeight = Math.min(100, Math.max(8, (ap / maxAp) * 100))
+                      const enHeight = Math.min(100, Math.max(8, (en / maxEn) * 100))
+                      return (
+                        <div key={idx} className="flex-1 flex items-end justify-center gap-0.5 h-full group relative">
+                          <div style={{ height: `${apHeight}%` }} className="w-full bg-cyan-500/70 hover:bg-cyan-400 rounded-t-sm transition-all" />
+                          <div style={{ height: `${enHeight}%` }} className="w-full bg-purple-500/70 hover:bg-purple-400 rounded-t-sm transition-all" />
+                          <div className="opacity-0 group-hover:opacity-100 absolute bottom-full mb-1 text-[9px] font-mono bg-black/90 text-white px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap z-10">
+                            F{idx}: Ap={ap.toFixed(3)}, En={en.toFixed(3)}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="flex justify-between text-[10px] font-mono text-slate-500">
+                    <span>Frame 0 (Start)</span>
+                    <span>32 Uniformly Sampled Observations</span>
+                    <span>Frame 31 (End)</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-400">
+                🎙️ <strong className="text-slate-200">Forensic interpretation:</strong> {result.audio_lip.explanation || 'Audio-visual alignment evaluated across 32 synchronized timestamps.'}
+              </div>
+            </div>
+          ) : (
+            <div className="p-6 rounded-xl bg-slate-900/60 border border-slate-800 text-center space-y-2">
+              <FaVolumeMute className="w-8 h-8 text-slate-500 mx-auto mb-1" />
+              <p className="text-sm font-semibold text-slate-200">Audio track absent or silent in this video</p>
+              <p className="text-xs text-slate-400 max-w-lg mx-auto">
+                {result.audio_lip?.explanation || 'No voiced speech signal was detected in the video container. BioVision safely falls back to dual-modal visual-temporal + physiological rPPG analysis without penalizing video authenticity.'}
+              </p>
+            </div>
+          )}
+        </Card>
+
+        {/* E. QUALITY-GATED MULTIMODAL FUSION */}
+        <Card
+          title="E. Quality-Gated Multimodal Fusion"
+          subtitle="Tri-modal fusion combines visual-temporal dynamics, blood volume pulse, and speech-lip synchrony"
           action={
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono bg-purple-950/60 border border-purple-500/40 text-purple-300">
-              <FaLayerGroup className="w-3.5 h-3.5" /> 80% Visual + 20% rPPG
+              <FaLayerGroup className="w-3.5 h-3.5" />
+              {result.fusion?.modalities_used?.includes('audio_lip')
+                ? `${Math.round((result.fusion.visual_weight || 0.6) * 100)}% Vis + ${Math.round((result.fusion.rppg_weight || 0.2) * 100)}% rPPG + ${Math.round((result.fusion.audio_lip_weight || 0.2) * 100)}% Audio`
+                : '80% Visual + 20% rPPG'}
             </span>
           }
         >
           <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="glass-inset p-3.5">
-                <div className="text-[11px] font-mono text-slate-400 uppercase">Visual Branch Weight</div>
+                <div className="text-[11px] font-mono text-slate-400 uppercase">Visual Branch</div>
                 <div className="text-xl font-bold text-cyan-300 mt-1">
-                  {result.fusion ? `${Math.round(result.fusion.visual_weight * 100)}%` : '80%'}
+                  {result.fusion ? `${Math.round(result.fusion.visual_weight * 100)}%` : '60%'}
                 </div>
-                <div className="text-xs text-slate-500 mt-0.5">Spatio-temporal baseline</div>
+                <div className="text-xs text-slate-500 mt-0.5">Spatio-temporal</div>
               </div>
               <div className="glass-inset p-3.5">
-                <div className="text-[11px] font-mono text-slate-400 uppercase">Physiological Weight</div>
+                <div className="text-[11px] font-mono text-slate-400 uppercase">rPPG Branch</div>
                 <div className="text-xl font-bold text-emerald-300 mt-1">
                   {result.fusion ? `${Math.round(result.fusion.rppg_weight * 100)}%` : (rppgAvailable ? '20%' : '0%')}
                 </div>
-                <div className="text-xs text-slate-500 mt-0.5">Quality-gated contribution</div>
+                <div className="text-xs text-slate-500 mt-0.5">Blood volume pulse</div>
               </div>
               <div className="glass-inset p-3.5">
-                <div className="text-[11px] font-mono text-slate-400 uppercase">Final Fused Probability</div>
+                <div className="text-[11px] font-mono text-slate-400 uppercase">Audio-Lip Branch</div>
+                <div className="text-xl font-bold text-purple-300 mt-1">
+                  {result.fusion?.audio_lip_weight != null ? `${Math.round(result.fusion.audio_lip_weight * 100)}%` : (result.audio_lip?.status === 'AVAILABLE' ? '20%' : '0%')}
+                </div>
+                <div className="text-xs text-slate-500 mt-0.5">Phoneme-viseme</div>
+              </div>
+              <div className="glass-inset p-3.5">
+                <div className="text-[11px] font-mono text-slate-400 uppercase">Final Probability</div>
                 <div className="text-xl font-bold text-slate-100 mt-1">
                   {formatPercent(result.fake_probability)}
                 </div>
@@ -650,10 +770,10 @@ export default function Results() {
             </div>
 
             <div className="p-3.5 rounded-xl bg-black/40 border border-slate-800 font-mono text-xs text-slate-300 space-y-1">
-              <div className="text-slate-500 uppercase tracking-wider text-[10px]">Fusion Formula</div>
-              <div>P_final = (0.80 × P_visual) + (0.20 × Anomaly_rPPG)</div>
+              <div className="text-slate-500 uppercase tracking-wider text-[10px]">Fusion Protocol</div>
+              <div>P_final = (W_vis × P_vis) + (W_rppg × Anom_rppg) + (W_audio × Anom_audio)</div>
               <div className="text-slate-400 text-[11px] mt-1">
-                {result.fusion?.method || 'Quality-gated late fusion (EfficientNet-B4 + LSTM + CHROM rPPG)'}
+                {result.fusion?.method || 'Tri-modal multimodal fusion (Visual-Temporal + CHROM rPPG + Audio-Lip)'}
               </div>
             </div>
           </div>

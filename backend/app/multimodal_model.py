@@ -67,12 +67,15 @@ class AudioLipBranch(nn.Module):
         self.temporal = nn.LSTM(input_size=192, hidden_size=hidden_size, batch_first=True)
         self.output = nn.Sequential(nn.Linear(hidden_size, 128), nn.Dropout(0.20))
 
-    def forward(self, mfcc: torch.Tensor, mouth: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
+    def forward(self, mfcc: torch.Tensor, mouth: torch.Tensor, lengths: torch.Tensor = None) -> torch.Tensor:
         paired = torch.cat((self.audio_projection(mfcc), self.lip_projection(mouth)), dim=-1)
-        packed = nn.utils.rnn.pack_padded_sequence(
-            paired, lengths.cpu(), batch_first=True, enforce_sorted=False
-        )
-        _, (hidden, _) = self.temporal(packed)
+        if lengths is not None:
+            packed = nn.utils.rnn.pack_padded_sequence(
+                paired, lengths.cpu(), batch_first=True, enforce_sorted=False
+            )
+            _, (hidden, _) = self.temporal(packed)
+        else:
+            _, (hidden, _) = self.temporal(paired)
         return self.output(hidden[-1])
 
 
