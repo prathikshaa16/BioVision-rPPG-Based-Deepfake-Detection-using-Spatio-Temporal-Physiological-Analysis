@@ -468,6 +468,8 @@ def build_biovision_model_from_checkpoint(checkpoint_path: str) -> nn.Module:
 
     if isinstance(state, dict):
         arch = state.get('architecture', '')
+        if arch in ('BioVisionMultimodalModel', 'BioVisionTriModal'):
+            return BioVisionMultimodalModel()
         if arch == 'BioVisionMultiHarmonic':
             return BioVisionMultiHarmonic()
         state_dict = state.get('model_state_dict', state.get('state_dict', state))
@@ -475,7 +477,9 @@ def build_biovision_model_from_checkpoint(checkpoint_path: str) -> nn.Module:
         state_dict = state
 
     keys = set(k.replace('module.', '') for k in state_dict.keys())
-    if 'vis_proj.0.weight' in keys or 'physio_mlp.0.weight' in keys:
+    if any(k.startswith('audio_lip') for k in keys) or any('classifier.0.weight' in k and state_dict[k].shape[-1] == 448 for k in keys):
+        return BioVisionMultimodalModel()
+    elif 'vis_proj.0.weight' in keys or 'physio_mlp.0.weight' in keys:
         return BioVisionMultiHarmonic()
     elif any('cardiac_spectral_mlp' in k for k in keys):
         return BioVisionCardiacSpectral()

@@ -29,3 +29,4 @@ data/
 # Allow the BioVision production checkpoint
 !backend/models/
 !backend/models/biovision_best.pt
+!backend/models/biovision_unified_648_seed42.pt
