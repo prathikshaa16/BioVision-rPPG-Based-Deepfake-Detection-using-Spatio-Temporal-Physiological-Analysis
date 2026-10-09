@@ -150,7 +150,7 @@ export default function Settings() {
         <div className="space-y-3 text-sm">
           <div className="data-row">
             <span className="data-row-label">Product</span>
-            <span className="data-row-value">BioVision — AI Deepfake Detection &amp; Video Forensics</span>
+            <span className="data-row-value">BioVision</span>
           </div>
           <div className="data-row">
             <span className="data-row-label">Detection model</span>

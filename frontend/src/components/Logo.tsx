@@ -12,10 +12,10 @@ export default function Logo({ size = 'md', light = false }: { size?: 'sm' | 'md
         BV
       </div>
       <div className="leading-tight">
-        <div className="text-sm font-semibold text-slate-100 group-hover:text-cyan-300 transition-colors">
+        <div className="text-base font-bold text-slate-100 group-hover:text-cyan-300 transition-colors tracking-wide">
           {APP_NAME}
         </div>
-        <div className="text-[11px] text-slate-500">{APP_TAGLINE}</div>
+        {APP_TAGLINE ? <div className="text-[11px] text-slate-500">{APP_TAGLINE}</div> : null}
       </div>
     </Link>
   )

@@ -19,7 +19,7 @@ import Settings from './pages/Settings'
 function RouteTitle() {
   const { pathname } = useLocation()
   useEffect(() => {
-    document.title = PAGE_TITLES[pathname] || 'BioVision — See Beyond the Frame'
+    document.title = PAGE_TITLES[pathname] || 'BioVision'
   }, [pathname])
   return null
 }

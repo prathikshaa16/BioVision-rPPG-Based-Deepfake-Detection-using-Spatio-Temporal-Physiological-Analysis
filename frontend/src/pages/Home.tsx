@@ -42,8 +42,8 @@ function Navbar() {
             BV
           </div>
           <div className="leading-tight">
-            <div className="text-sm font-semibold text-slate-100">{APP_NAME}</div>
-            <div className="text-[11px] text-slate-400">{APP_TAGLINE}</div>
+            <div className="text-base font-bold text-slate-100 tracking-wide">{APP_NAME}</div>
+            {APP_TAGLINE ? <div className="text-[11px] text-slate-400">{APP_TAGLINE}</div> : null}
           </div>
         </Link>
 
@@ -741,7 +741,7 @@ export default function Home() {
             <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-white font-bold text-xs">
               BV
             </div>
-            <span>BioVision · Spatio-Temporal & Physiological Deepfake Detection</span>
+            <span className="font-semibold text-slate-300 tracking-wide">BioVision</span>
           </div>
           <div>
             Deepfake detection is probabilistic evidence · Not an absolute proof

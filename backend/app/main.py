@@ -14,7 +14,7 @@ from starlette.concurrency import run_in_threadpool
 from .config import BASE_DIR, DEFAULT_MODEL_TYPE, MAX_UPLOAD_SIZE, MODEL_PATH, UPLOAD_DIR, resolve_model_paths
 from .inference import analyze_video, load_model
 
-app = FastAPI(title="Deepfake Detector API")
+app = FastAPI(title="BioVision API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

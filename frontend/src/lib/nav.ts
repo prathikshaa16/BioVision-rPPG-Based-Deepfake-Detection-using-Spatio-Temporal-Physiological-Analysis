@@ -18,7 +18,7 @@ export interface NavItem {
 }
 
 export const APP_NAME = 'BioVision'
-export const APP_TAGLINE = 'Spatio-Temporal & Physiological Deepfake Detection'
+export const APP_TAGLINE = ''
 
 export const navItems: NavItem[] = [
   { to: '/', label: 'Home', icon: FaHome, end: true },
