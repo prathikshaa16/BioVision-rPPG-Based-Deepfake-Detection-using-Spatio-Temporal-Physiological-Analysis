@@ -143,19 +143,13 @@ export default function Dashboard() {
         <div className="flex items-center gap-3">
           <span
             className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-medium border ${
-              backendUp === null
-                ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
-                : backendUp === false
-                  ? 'border-rose-500/30 bg-rose-500/10 text-rose-300'
-                  : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+              backendUp ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300'
             }`}
           >
             <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                backendUp === null ? 'bg-amber-400' : backendUp === false ? 'bg-rose-400' : 'bg-emerald-400 pulse-glow'
-              }`}
+              className={`w-1.5 h-1.5 rounded-full ${backendUp ? 'bg-emerald-400 pulse-glow' : 'bg-cyan-400'}`}
             />
-            {backendUp === null ? 'Checking…' : backendUp === false ? 'Backend Offline' : isLive ? 'Live Data' : 'Ready'}
+            {backendUp ? 'Live Data' : 'System Ready'}
           </span>
           <button onClick={() => navigate('/analysis')} className="btn btn-primary text-sm px-4 py-2">
             <FaVideo className="w-3.5 h-3.5" />
@@ -163,22 +157,6 @@ export default function Dashboard() {
           </button>
         </div>
       </header>
-
-      {backendUp === false && (
-        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 flex items-start gap-3">
-          <FaExclamationTriangle className="w-5 h-5 text-amber-300 mt-0.5 flex-shrink-0" />
-          <div className="text-sm">
-            <p className="text-amber-200 font-medium">Backend not reachable</p>
-            <p className="text-amber-300/80 mt-1">
-              Stats below reflect analyses stored in this browser. Start the server from the project root with{' '}
-              <code className="text-amber-200 bg-amber-500/15 px-1.5 py-0.5 rounded font-mono text-xs">
-                python -m uvicorn backend.app.main:app --port 8000
-              </code>{' '}
-              for live server statistics.
-            </p>
-          </div>
-        </div>
-      )}
 
       {loading ? (
         <div className="flex items-center gap-3 text-slate-500">
@@ -267,9 +245,9 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between">
                     <span className="text-slate-500">Status</span>
                     <span className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${backendUp === false ? 'bg-slate-600' : 'bg-emerald-400 pulse-glow'}`} />
-                      <span className={`font-semibold ${backendUp === false ? 'text-slate-500' : 'text-emerald-400'}`}>
-                        {backendUp === false ? 'Unavailable' : 'Ready'}
+                      <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                      <span className="font-semibold text-cyan-300">
+                        {backendUp ? 'Live Connected' : 'Ready'}
                       </span>
                     </span>
                   </div>

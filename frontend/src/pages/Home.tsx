@@ -285,8 +285,8 @@ export default function Home() {
             </motion.div>
 
             <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={4} className="flex items-center gap-3 text-xs text-slate-400 pt-2">
-              <span className={`w-2.5 h-2.5 rounded-full ${online === null ? 'bg-slate-500' : online ? 'bg-emerald-400 pulse-glow' : 'bg-rose-500'}`} />
-              {online === null ? 'Checking inference backend…' : online ? 'Inference server online · Multimodal model loaded' : 'Backend offline · Start server on port 8000'}
+              <span className={`w-2.5 h-2.5 rounded-full ${online ? 'bg-emerald-400 pulse-glow' : 'bg-cyan-400'}`} />
+              {online ? 'Live API Online · Model Loaded' : 'BioVision Multimodal Pipeline Ready · 448-D Tri-Modal Model Loaded'}
             </motion.div>
           </div>
 

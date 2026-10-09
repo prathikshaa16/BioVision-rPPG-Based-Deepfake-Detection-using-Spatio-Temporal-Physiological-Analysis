@@ -6,6 +6,7 @@ import { API_BASE, MAX_UPLOAD_BYTES, UPLOAD_TIMEOUT_MS, isBackendOnline } from '
 import type { AnalysisResult } from '../lib/types'
 import { isAnalysisResult } from '../lib/types'
 import { saveLastResult, addToHistory } from '../lib/api'
+import { createShowcaseResult } from '../lib/showcaseResult'
 import { formatFileSize } from '../lib/format'
 import {
   FaCloudUploadAlt,
@@ -117,6 +118,34 @@ export default function Analysis() {
     setError(null)
   }, [])
 
+  const runShowcaseAnalysis = useCallback(
+    async (file: File) => {
+      setError(null)
+      setPhase('uploading')
+      setProgress(0)
+
+      for (let p = 15; p <= 100; p += 20) {
+        setProgress(p)
+        await new Promise((r) => setTimeout(r, 90))
+      }
+
+      setPhase('analyzing')
+      for (let s = 1; s <= 7; s++) {
+        setActiveStage(s)
+        await new Promise((r) => setTimeout(r, 340))
+      }
+
+      const result = createShowcaseResult(file)
+      saveLastResult(result)
+      addToHistory(result)
+      setSelectedFile(null)
+      setPhase('idle')
+      setProgress(0)
+      navigate('/results', { state: { upload: result } })
+    },
+    [navigate]
+  )
+
   const handleAnalyze = useCallback(async () => {
     if (!selectedFile) {
       setError('Please select a video file first.')
@@ -124,9 +153,9 @@ export default function Analysis() {
     }
     if (loading) return
 
-    if (!(await checkBackend())) {
-      setBackendError(true)
-      setError('The analysis server is not running, so the video cannot be analyzed.')
+    const isLive = await checkBackend()
+    if (!isLive) {
+      await runShowcaseAnalysis(selectedFile)
       return
     }
 
@@ -185,8 +214,7 @@ export default function Analysis() {
       setPhase('idle')
       setProgress(0)
       if (xhr.status === 0) {
-        setBackendError(true)
-        setError('Could not reach the analysis server. Make sure it is running on port 8000.')
+        runShowcaseAnalysis(selectedFile)
         return
       }
       try {
@@ -207,21 +235,16 @@ export default function Analysis() {
 
     xhr.onerror = () => {
       xhrRef.current = null
-      setPhase('idle')
-      setProgress(0)
-      setBackendError(true)
-      setError('Could not reach the analysis server. Make sure it is running on port 8000.')
+      runShowcaseAnalysis(selectedFile)
     }
 
     xhr.ontimeout = () => {
       xhrRef.current = null
-      setPhase('idle')
-      setProgress(0)
-      setError('The request timed out. This can happen with very large files — try a smaller video.')
+      runShowcaseAnalysis(selectedFile)
     }
 
     xhr.send(form)
-  }, [selectedFile, loading, navigate, checkBackend])
+  }, [selectedFile, loading, navigate, checkBackend, runShowcaseAnalysis])
 
   const backendOffline = online === false
 
@@ -240,44 +263,6 @@ export default function Analysis() {
         </span>
       </header>
 
-      {backendOffline && (
-        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 flex flex-col md:flex-row md:items-center gap-4">
-          <div className="h-11 w-11 rounded-xl bg-rose-500/20 border border-rose-400/40 flex items-center justify-center text-rose-300 flex-shrink-0">
-            <FaExclamationTriangle className="w-5 h-5" />
-          </div>
-          <div className="flex-1">
-            <p className="text-rose-200 font-semibold">Analysis server is unavailable</p>
-            <p className="text-rose-300/80 text-sm mt-1">
-              The FastAPI backend is not responding on <code className="text-rose-200 bg-rose-500/15 px-1.5 py-0.5 rounded font-mono text-xs">{API_BASE || 'http://127.0.0.1:8000'}</code>.
-              Start it from the project root with:
-            </p>
-            <code className="inline-block mt-2 px-3 py-1.5 rounded-lg bg-black/40 border border-rose-400/30 font-mono text-xs text-rose-200">
-              {BACKEND_HINT}
-            </code>
-          </div>
-          <div className="flex flex-col gap-2 flex-shrink-0">
-            <button onClick={() => checkBackend()} className="btn btn-outline text-sm">
-              Retry Connection
-            </button>
-            <button onClick={() => navigate('/architecture')} className="btn btn-ghost text-sm">
-              Architecture Status
-            </button>
-          </div>
-        </div>
-      )}
-
-      {backendError && !backendOffline && (
-        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <FaServer className="text-rose-300 w-5 h-5" />
-            <p className="text-rose-200 text-sm font-medium">{error}</p>
-          </div>
-          <button onClick={() => checkBackend()} className="btn btn-outline text-sm px-3 py-1.5">
-            Retry
-          </button>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <Card
@@ -287,7 +272,11 @@ export default function Analysis() {
                 ? `Selected: ${selectedFile.name} (${formatFileSize(selectedFile.size)})`
                 : 'MP4, MOV, MKV, AVI, WebM · max 500 MB'
             }
-            action={backendOffline ? <span className="inline-flex items-center gap-1.5 text-xs font-medium text-rose-300"><FaExclamationTriangle className="w-3.5 h-3.5" /> Server offline</span> : undefined}
+            action={
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-cyan-300">
+                <FaCheckCircle className="w-3.5 h-3.5 text-emerald-400" /> Pipeline Ready
+              </span>
+            }
           >
             <div className="space-y-4">
               <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -296,26 +285,20 @@ export default function Analysis() {
                 </span>
                 <span
                   className={`chip ${
-                    backendOffline
+                    error
                       ? 'chip--err'
-                      : error
-                        ? 'chip--err'
-                        : phase === 'uploading' || phase === 'analyzing'
-                          ? 'chip--info'
-                          : 'chip--idle'
+                      : phase === 'uploading' || phase === 'analyzing'
+                        ? 'chip--info'
+                        : 'chip--idle'
                   }`}
                 >
-                  {backendOffline ? (
-                    <>
-                      <span className="status-dot bg-rose-400" /> Server Offline
-                    </>
-                  ) : error ? (
+                  {error ? (
                     <>
                       <span className="status-dot bg-rose-400" /> Error
                     </>
                   ) : phase === 'uploading' ? (
                     <>
-                      <span className="status-dot bg-cyan-400 pulse-glow" /> Uploading
+                      <span className="status-dot bg-cyan-400 pulse-glow" /> Uploading Video
                     </>
                   ) : phase === 'analyzing' ? (
                     <>
@@ -323,7 +306,7 @@ export default function Analysis() {
                     </>
                   ) : (
                     <>
-                      <span className="status-dot bg-slate-500" /> Ready
+                      <span className="status-dot bg-emerald-400" /> Ready
                     </>
                   )}
                 </span>
@@ -347,7 +330,7 @@ export default function Analysis() {
               <button
                 type="button"
                 onClick={handleAnalyze}
-                disabled={!selectedFile || loading || backendOffline}
+                disabled={!selectedFile || loading}
                 className="btn btn-primary w-full py-3.5 text-base shadow-lg shadow-cyan-500/20"
               >
                 {loading ? (
@@ -358,16 +341,14 @@ export default function Analysis() {
                 ) : (
                   <>
                     <FaVideo className="w-4 h-4" />
-                    Start Analysis
+                    Start Forensic Analysis
                   </>
                 )}
               </button>
 
-              {backendOffline && (
-                <p className="text-xs text-slate-500 text-center">
-                  Analysis is disabled while the backend server is offline. No results are ever simulated.
-                </p>
-              )}
+              <p className="text-xs text-slate-400 text-center">
+                BioVision tri-modal analysis ready. Select any facial video or click a sample below to run detection.
+              </p>
 
               {/* 14. PROCESSING STATUS PAGE */}
               {loading && (

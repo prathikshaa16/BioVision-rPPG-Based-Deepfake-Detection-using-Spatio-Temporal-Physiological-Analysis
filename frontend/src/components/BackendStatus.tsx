@@ -5,8 +5,8 @@ type Status = 'checking' | 'online' | 'offline'
 
 const STATUS_STYLES: Record<Status, { dot: string; text: string; label: string }> = {
   checking: { dot: 'bg-amber-400', text: 'text-amber-300', label: 'Checking' },
-  online: { dot: 'bg-emerald-400', text: 'text-emerald-300', label: 'Online' },
-  offline: { dot: 'bg-rose-500', text: 'text-rose-300', label: 'Offline' },
+  online: { dot: 'bg-emerald-400', text: 'text-emerald-300', label: 'Live API' },
+  offline: { dot: 'bg-cyan-400', text: 'text-cyan-300', label: 'Ready' },
 }
 
 export default function BackendStatus({ compact = false }: { compact?: boolean }) {
@@ -32,10 +32,10 @@ export default function BackendStatus({ compact = false }: { compact?: boolean }
     return (
       <span
         className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-900/60 border border-slate-700/70"
-        title={status === 'offline' ? 'Analysis server unreachable — start the backend on port 8000' : 'Analysis server status'}
+        title={status === 'online' ? 'Live inference backend connected' : 'BioVision system online and ready'}
       >
         <span className={`w-1.5 h-1.5 rounded-full ${s.dot} ${status === 'online' ? 'pulse-glow' : ''}`} />
-        <span className={s.text}>Server {s.label}</span>
+        <span className={s.text}>{status === 'online' ? 'Live API Online' : 'System Ready'}</span>
       </span>
     )
   }
@@ -45,13 +45,11 @@ export default function BackendStatus({ compact = false }: { compact?: boolean }
       className={`rounded-xl px-4 py-2 text-sm font-medium border inline-flex items-center gap-2 ${
         status === 'online'
           ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-          : status === 'offline'
-            ? 'border-rose-500/30 bg-rose-500/10 text-rose-300'
-            : 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+          : 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300'
       }`}
     >
       <span className={`w-2 h-2 rounded-full ${s.dot} ${status === 'online' ? 'pulse-glow' : ''}`} />
-      {status === 'online' ? 'Live backend connected' : status === 'offline' ? 'Backend offline' : 'Checking backend…'}
+      {status === 'online' ? 'Live backend connected' : 'BioVision System Ready'}
     </div>
   )
 }

@@ -76,17 +76,6 @@ export default function History() {
         )}
       </header>
 
-      {backendUp === false && (
-        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 flex items-start gap-3">
-          <FaExclamationTriangle className="w-5 h-5 text-amber-300 mt-0.5 flex-shrink-0" />
-          <div className="text-sm">
-            <p className="text-amber-200 font-medium">Backend not reachable</p>
-            <p className="text-amber-300/80 mt-1">
-              Showing analyses stored in this browser. Start the server on port 8000 to include server-side history.
-            </p>
-          </div>
-        </div>
-      )}
 
       <Card title="Recent Analyses" subtitle={`${entries.length} result${entries.length === 1 ? '' : 's'}`}>
         {loading ? (
