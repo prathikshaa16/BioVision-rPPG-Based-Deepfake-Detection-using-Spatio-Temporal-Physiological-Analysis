@@ -2,15 +2,45 @@ import type { AnalysisResult } from './types'
 import { isAnalysisResult } from './types'
 import { timestampOf } from './types'
 
-export const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, '') || ''
+export const API_URL_KEY = 'biovision:api_url'
+
+export function getApiBase(): string {
+  if (typeof window !== 'undefined') {
+    const custom = localStorage.getItem(API_URL_KEY)
+    if (custom && custom.trim()) {
+      return custom.trim().replace(/\/+$/, '')
+    }
+  }
+  return (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, '') || ''
+}
+
+export function setApiBase(url: string): void {
+  try {
+    if (!url || !url.trim()) {
+      localStorage.removeItem(API_URL_KEY)
+    } else {
+      localStorage.setItem(API_URL_KEY, url.trim().replace(/\/+$/, ''))
+    }
+  } catch {}
+}
+
+export const API_BASE = {
+  toString: () => getApiBase(),
+  valueOf: () => getApiBase(),
+}
+
 export const MAX_UPLOAD_BYTES = 500 * 1024 * 1024
 export const UPLOAD_TIMEOUT_MS = 10 * 60 * 1000
 
-export async function isBackendOnline(timeoutMs = 5000): Promise<boolean> {
+export async function isBackendOnline(timeoutMs = 5000, targetUrl?: string): Promise<boolean> {
+  const base = targetUrl !== undefined ? targetUrl.replace(/\/+$/, '') : getApiBase()
+  if (!base && typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return false
+  }
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
-    const res = await fetch(`${API_BASE}/health`, { signal: controller.signal })
+    const res = await fetch(`${base}/health`, { signal: controller.signal })
     if (!res.ok) return false
     const contentType = res.headers.get('content-type') || ''
     if (!contentType.includes('application/json')) return false

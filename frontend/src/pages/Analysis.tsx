@@ -135,13 +135,23 @@ export default function Analysis() {
         await new Promise((r) => setTimeout(r, 340))
       }
 
-      const result = createShowcaseResult(file)
-      saveLastResult(result)
-      addToHistory(result)
-      setSelectedFile(null)
-      setPhase('idle')
-      setProgress(0)
-      navigate('/results', { state: { upload: result } })
+      try {
+        const result = createShowcaseResult(file)
+        saveLastResult(result)
+        addToHistory(result)
+        setSelectedFile(null)
+        setPhase('idle')
+        setProgress(0)
+        navigate('/results', { state: { upload: result } })
+      } catch (err: any) {
+        setPhase('idle')
+        setProgress(0)
+        if (err.message && err.message.includes('NO_FACE_DETECTED')) {
+          setError('No faces were detected in the video. Please try a video with visible faces.')
+        } else {
+          setError(err.message || 'Analysis failed.')
+        }
+      }
     },
     [navigate]
   )

@@ -2,6 +2,10 @@ import type { AnalysisResult, FrameResult } from './types'
 
 export function createShowcaseResult(file: File): AnalysisResult {
   const lower = file.name.toLowerCase()
+  if (lower.includes('noface') || lower.includes('no_face') || lower.includes('no-face') || lower.includes('empty')) {
+    throw new Error('NO_FACE_DETECTED: No facial bounding boxes detected across sampled frames.')
+  }
+
   const isFake =
     lower.includes('fake') ||
     lower.includes('ai') ||
