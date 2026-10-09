@@ -11,7 +11,11 @@ export async function isBackendOnline(timeoutMs = 5000): Promise<boolean> {
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
     const res = await fetch(`${API_BASE}/health`, { signal: controller.signal })
-    return res.ok
+    if (!res.ok) return false
+    const contentType = res.headers.get('content-type') || ''
+    if (!contentType.includes('application/json')) return false
+    const data = await res.json()
+    return !!data && (data.status === 'healthy' || data.status === 'ok')
   } catch {
     return false
   } finally {
