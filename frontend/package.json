@@ -13,6 +13,7 @@
     "clsx": "^2.1.1",
     "framer-motion": "^13.1.0",
     "jspdf": "^4.2.1",
+    "picojs": "^1.0.0",
     "postcss": "^8.5.26",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

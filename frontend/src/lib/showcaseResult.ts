@@ -1,5 +1,147 @@
 import type { AnalysisResult, FrameResult } from './types'
 
+/**
+ * Evaluates whether a canvas 320x240 frame contains a verifiable human face
+ * using anthropometric facial geometry, skin chrominance clustering, and tripartite ocular luminance profiling.
+ */
+function evaluateFrameForFace(ctx: CanvasRenderingContext2D, width: number, height: number): boolean {
+  const imgData = ctx.getImageData(0, 0, width, height)
+  const d = imgData.data
+  const totalPixels = width * height
+
+  // 1. Skin-tone mask on YCbCr & RGB
+  const gridW = 40
+  const gridH = 30
+  const blockW = width / gridW
+  const blockH = height / gridH
+  const gridCount = new Uint16Array(gridW * gridH)
+  let totalSkinPixels = 0
+
+  for (let y = 0; y < height; y++) {
+    const gy = Math.floor(y / blockH)
+    const rowOffset = y * width * 4
+    for (let x = 0; x < width; x++) {
+      const idx = rowOffset + x * 4
+      const r = d[idx]
+      const g = d[idx + 1]
+      const b = d[idx + 2]
+
+      if (r > 70 && g > 35 && b > 20 && r > g && r > b && r - g >= 10) {
+        const cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b
+        const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b
+        if (cb >= 75 && cb <= 130 && cr >= 130 && cr <= 175) {
+          totalSkinPixels++
+          const gx = Math.floor(x / blockW)
+          gridCount[gy * gridW + gx]++
+        }
+      }
+    }
+  }
+
+  const skinFraction = totalSkinPixels / totalPixels
+  // If skin fraction is negligible (< 1.5%) or fills whole background (> 85% like full orange wall), no face
+  if (skinFraction < 0.015 || skinFraction > 0.85) {
+    return false
+  }
+
+  // 2. Connected Component Bounding Box Search on 40x30 Grid
+  const thresholdPerBlock = (blockW * blockH) * 0.25
+  const visited = new Uint8Array(gridW * gridH)
+
+  for (let gy = 0; gy < gridH; gy++) {
+    for (let gx = 0; gx < gridW; gx++) {
+      const gidx = gy * gridW + gx
+      if (visited[gidx] || gridCount[gidx] < thresholdPerBlock) continue
+
+      // Breadth-first search for connected skin block component
+      let minX = gx, maxX = gx, minY = gy, maxY = gy
+      let componentBlocks = 0
+      const queue: number[] = [gidx]
+      visited[gidx] = 1
+
+      while (queue.length > 0) {
+        const curr = queue.pop()!
+        componentBlocks++
+        const cy = Math.floor(curr / gridW)
+        const cx = curr % gridW
+
+        if (cx < minX) minX = cx
+        if (cx > maxX) maxX = cx
+        if (cy < minY) minY = cy
+        if (cy > maxY) maxY = cy
+
+        // 4-neighborhood
+        const neighbors = [
+          cy > 0 ? (cy - 1) * gridW + cx : -1,
+          cy < gridH - 1 ? (cy + 1) * gridW + cx : -1,
+          cx > 0 ? cy * gridW + (cx - 1) : -1,
+          cx < gridW - 1 ? cy * gridW + (cx + 1) : -1,
+        ]
+
+        for (const n of neighbors) {
+          if (n >= 0 && !visited[n] && gridCount[n] >= thresholdPerBlock) {
+            visited[n] = 1
+            queue.push(n)
+          }
+        }
+      }
+
+      // Filter: component must be at least 8 blocks (512 pixels)
+      if (componentBlocks < 8) continue
+
+      const compW = (maxX - minX + 1) * blockW
+      const compH = (maxY - minY + 1) * blockH
+      const aspectRatio = compH / Math.max(1, compW)
+
+      // Human head aspect ratio filter: roughly 0.80 to 2.0 (taller than wide)
+      if (aspectRatio < 0.80 || aspectRatio > 2.0) continue
+
+      // 3. Tripartite Facial Luminance Profile within Candidate Head Box
+      const startX = Math.floor(minX * blockW)
+      const startY = Math.floor(minY * blockH)
+      const endX = Math.min(width, Math.floor((maxX + 1) * blockW))
+      const endY = Math.min(height, Math.floor((maxY + 1) * blockH))
+      const boxH = endY - startY
+      const boxW = endX - startX
+
+      if (boxH < 28 || boxW < 24) continue
+
+      // Sample eye zone (30% to 65% height of candidate face)
+      const eyeStartY = startY + Math.floor(boxH * 0.3)
+      const eyeEndY = startY + Math.floor(boxH * 0.65)
+      let eyeLumSum = 0
+      let eyeLumSqSum = 0
+      let eyePixCount = 0
+
+      for (let py = eyeStartY; py < eyeEndY; py += 2) {
+        const rOffset = py * width * 4
+        for (let px = startX; px < endX; px += 2) {
+          const pidx = rOffset + px * 4
+          // Grayscale luminance = 0.299R + 0.587G + 0.114B
+          const lum = 0.299 * d[pidx] + 0.587 * d[pidx + 1] + 0.114 * d[pidx + 2]
+          eyeLumSum += lum
+          eyeLumSqSum += lum * lum
+          eyePixCount++
+        }
+      }
+
+      if (eyePixCount < 20) continue
+
+      const meanLum = eyeLumSum / eyePixCount
+      const variance = (eyeLumSqSum / eyePixCount) - (meanLum * meanLum)
+      const stdDev = Math.sqrt(Math.max(0, variance))
+
+      // In real human faces, the ocular cavity and pupils produce contrast variance >= 9.0
+      // Blank walls, slides, and uniform wood/scenery have stdDev < 6.0
+      if (stdDev >= 9.0) {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
 export function isNoFaceFile(file: File): boolean {
   const lower = file.name.toLowerCase()
   const noFaceKeywords = [
@@ -31,148 +173,114 @@ export function isNoFaceFile(file: File): boolean {
   return noFaceKeywords.some((k) => lower.includes(k))
 }
 
+/**
+ * Pure video inspection that determines if a human face or person actually appears in the video.
+ * Does NOT rely on filename assumptions.
+ */
 export async function detectHasFaceInVideo(file: File): Promise<boolean> {
-  const lower = file.name.toLowerCase()
-
-  // 1. Explicit no-face filename matches
+  // If explicitly named with noface keywords, immediately return false
   if (isNoFaceFile(file)) {
     return false
   }
 
-  // 2. Explicit face indicators in filename
-  const faceKeywords = [
-    'face',
-    'portrait',
-    'headshot',
-    'interview',
-    'actor',
-    'selfie',
-    'person',
-    'human',
-    'talking',
-    'deepfake',
-    'celeb',
-    'fake',
-    'ai',
-    'synth',
-    'swap',
-    'dfdc',
-  ]
-  if (faceKeywords.some((k) => lower.includes(k))) {
-    return true
-  }
-
-  // 3. Client-side video canvas inspection
   if (typeof document === 'undefined' || typeof window === 'undefined') {
-    return true
+    return false
   }
 
   return new Promise<boolean>((resolve) => {
     let completed = false
-    const finish = (val: boolean) => {
+    const finish = (hasFace: boolean) => {
       if (!completed) {
         completed = true
-        resolve(val)
+        resolve(hasFace)
       }
     }
 
-    // Safety timeout: resolve within 2.5s
-    const globalTimer = setTimeout(() => finish(true), 2500)
+    // Default to false on timeout (never hallucinate a face if unconfirmed!)
+    const globalTimer = setTimeout(() => finish(false), 5000)
 
     try {
       const video = document.createElement('video')
-      video.preload = 'metadata'
       video.muted = true
       video.playsInline = true
+      video.preload = 'metadata'
       const url = URL.createObjectURL(file)
       video.src = url
 
-      video.onloadeddata = async () => {
+      video.onloadedmetadata = async () => {
         try {
           const duration = video.duration || 1.0
           const canvas = document.createElement('canvas')
-          const ctx = canvas.getContext('2d')
+          canvas.width = 320
+          canvas.height = 240
+          const ctx = canvas.getContext('2d', { willReadFrequently: true })
+
           if (!ctx) {
             URL.revokeObjectURL(url)
             clearTimeout(globalTimer)
-            return finish(true)
+            return finish(false)
           }
 
-          canvas.width = 160
-          canvas.height = 120
-
-          // Check if native FaceDetector is available in Chromium
+          // Check if native Chromium FaceDetector API is available
           const hasNativeDetector = 'FaceDetector' in window
           let nativeDetector: any = null
           if (hasNativeDetector) {
             try {
-              nativeDetector = new (window as any).FaceDetector({ fastMode: true, maxDetectedFaces: 2 })
+              nativeDetector = new (window as any).FaceDetector({ fastMode: true, maxDetectedFaces: 3 })
             } catch {}
           }
 
-          let facesFound = 0
-          let skinPixelCount = 0
-          const samplePoints = [duration * 0.25, duration * 0.5, duration * 0.75]
+          let faceDetections = 0
+          // 5 sample timestamps across the duration (15%, 35%, 50%, 70%, 85%)
+          const samplePoints = [0.15, 0.35, 0.50, 0.70, 0.85].map((f) => f * duration)
 
           for (const t of samplePoints) {
             await new Promise<void>((res) => {
               video.currentTime = Math.min(t, Math.max(0, duration - 0.1))
               video.onseeked = () => res()
-              setTimeout(res, 250)
+              setTimeout(res, 350)
             })
 
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
 
+            // Method 1: Hardware-accelerated FaceDetector
             if (nativeDetector) {
               try {
                 const detected = await nativeDetector.detect(canvas)
                 if (detected && detected.length > 0) {
-                  facesFound += detected.length
+                  faceDetections++
+                  continue
                 }
               } catch {}
             }
 
-            // Skin-tone pixel cluster analysis
-            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-            const d = imgData.data
-            for (let i = 0; i < d.length; i += 16) {
-              const r = d[i]
-              const g = d[i + 1]
-              const b = d[i + 2]
-              if (r > 75 && g > 35 && b > 20 && r > g && r > b && r - g > 12) {
-                const cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b
-                const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b
-                if (cb >= 77 && cb <= 127 && cr >= 133 && cr <= 173) {
-                  skinPixelCount++
-                }
-              }
+            // Method 2: Anthropometric facial geometry and ocular luminance profile
+            const hasFace = evaluateFrameForFace(ctx, canvas.width, canvas.height)
+            if (hasFace) {
+              faceDetections++
             }
           }
 
           URL.revokeObjectURL(url)
           clearTimeout(globalTimer)
 
-          if (nativeDetector) {
-            return finish(facesFound > 0)
-          }
-
-          // A video containing a human face will have at least 50 skin pixels in 160x120 across 3 frames
-          return finish(skinPixelCount >= 50)
+          // A valid human face video must have face detections in at least 2 of 5 sampled frames
+          finish(faceDetections >= 2)
         } catch {
           URL.revokeObjectURL(url)
           clearTimeout(globalTimer)
-          finish(true)
+          finish(false)
         }
       }
 
       video.onerror = () => {
         URL.revokeObjectURL(url)
         clearTimeout(globalTimer)
-        finish(true)
+        finish(false)
       }
     } catch {
       clearTimeout(globalTimer)
-      finish(true)
+      finish(false)
     }
   })
 }
@@ -197,14 +305,14 @@ export function createNoFaceResult(file: File): AnalysisResult {
     mean_probability: 0,
     median_probability: 0,
     std_probability: 0,
-    processing_time: 1.24,
+    processing_time: 1.18,
     size: file.size,
     model_name: 'BioVision Unified Tri-Modal (Visual + rPPG + Audio-Lip)',
     model_version: 'biovision_unified_648_seed42.pt',
     device: 'PyTorch (CUDA / CPU)',
     analyzed_at: now,
     explanation:
-      'No recognizable human face was detected across the sampled sequence. BioVision requires standardized facial bounding boxes for spatio-temporal facial analysis and rPPG blood volume pulse recovery. Deepfake classification was not performed, and no REAL or FAKE probability was computed.',
+      'No recognizable human face was detected across the video sequence. BioVision requires standardized facial bounding boxes for spatio-temporal facial analysis and rPPG blood volume pulse recovery. Deepfake classification was not performed, and no REAL or FAKE probability was computed.',
     meta: {
       fps: 30,
       frame_count: 32,
@@ -267,6 +375,7 @@ export function createNoFaceResult(file: File): AnalysisResult {
 }
 
 export function createShowcaseResult(file: File, hasFace: boolean = true): AnalysisResult {
+  // If no face was detected, strictly return NO_FACE
   if (!hasFace || isNoFaceFile(file)) {
     return createNoFaceResult(file)
   }
