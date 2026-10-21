@@ -56,18 +56,38 @@ export async function detectHasFaceInVideo(file: File): Promise<boolean> {
       }
     }
 
-    // Default to false on timeout (never hallucinate a face if unconfirmed!)
-    const globalTimer = setTimeout(() => finish(false), 8000)
+    // Default to false on timeout
+    const globalTimer = setTimeout(() => finish(false), 9000)
 
     try {
+      const container = document.createElement('div')
+      container.style.position = 'fixed'
+      container.style.top = '-9999px'
+      container.style.left = '-9999px'
+      container.style.width = '1px'
+      container.style.height = '1px'
+      container.style.opacity = '0'
+      container.style.pointerEvents = 'none'
+      document.body.appendChild(container)
+
       const video = document.createElement('video')
       video.muted = true
       video.playsInline = true
       video.preload = 'auto'
+      container.appendChild(video)
+
       const url = URL.createObjectURL(file)
       video.src = url
 
-      video.onloadeddata = async () => {
+      const cleanup = () => {
+        URL.revokeObjectURL(url)
+        clearTimeout(globalTimer)
+        if (container.parentNode) {
+          container.parentNode.removeChild(container)
+        }
+      }
+
+      const processVideo = async () => {
         try {
           const duration = video.duration || 1.0
           const canvas = document.createElement('canvas')
@@ -76,12 +96,10 @@ export async function detectHasFaceInVideo(file: File): Promise<boolean> {
           const ctx = canvas.getContext('2d', { willReadFrequently: true })
 
           if (!ctx) {
-            URL.revokeObjectURL(url)
-            clearTimeout(globalTimer)
+            cleanup()
             return finish(false)
           }
 
-          // Check if native Chromium FaceDetector API is available
           const hasNativeDetector = 'FaceDetector' in window
           let nativeDetector: any = null
           if (hasNativeDetector) {
@@ -91,19 +109,17 @@ export async function detectHasFaceInVideo(file: File): Promise<boolean> {
           }
 
           let faceDetections = 0
-          // 5 sample timestamps across the duration (15%, 35%, 50%, 70%, 85%)
           const samplePoints = [0.15, 0.35, 0.50, 0.70, 0.85].map((f) => f * duration)
 
           for (const t of samplePoints) {
             await new Promise<void>((res) => {
               video.currentTime = Math.min(t, Math.max(0, duration - 0.1))
               video.onseeked = () => res()
-              setTimeout(res, 300)
+              setTimeout(res, 350)
             })
 
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
 
-            // Method 1: Hardware-accelerated FaceDetector (Chromium)
             if (nativeDetector) {
               try {
                 const detected = await nativeDetector.detect(canvas)
@@ -114,7 +130,6 @@ export async function detectHasFaceInVideo(file: File): Promise<boolean> {
               } catch {}
             }
 
-            // Method 2: Embedded neural pixel cascade detector (Pico FaceFinder)
             const picoDets = detectFacesInCanvas(canvas)
             const strongFaces = picoDets.filter((d) => d.score >= 1.5)
             if (strongFaces.length > 0) {
@@ -122,23 +137,30 @@ export async function detectHasFaceInVideo(file: File): Promise<boolean> {
             }
           }
 
-          URL.revokeObjectURL(url)
-          clearTimeout(globalTimer)
-
-          // A valid human face video must have face detections in at least 1 of 5 sampled frames
+          cleanup()
           finish(faceDetections >= 1)
         } catch {
-          URL.revokeObjectURL(url)
-          clearTimeout(globalTimer)
+          cleanup()
           finish(false)
         }
       }
 
+      let loaded = false
+      const onLoaded = () => {
+        if (!loaded) {
+          loaded = true
+          processVideo()
+        }
+      }
+
+      video.onloadedmetadata = onLoaded
+      video.onloadeddata = onLoaded
       video.onerror = () => {
-        URL.revokeObjectURL(url)
-        clearTimeout(globalTimer)
+        cleanup()
         finish(false)
       }
+
+      video.load()
     } catch {
       clearTimeout(globalTimer)
       finish(false)

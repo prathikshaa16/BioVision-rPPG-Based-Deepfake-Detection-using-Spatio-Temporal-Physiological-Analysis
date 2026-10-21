@@ -3,6 +3,7 @@ import { isAnalysisResult } from './types'
 import { timestampOf } from './types'
 
 export const API_URL_KEY = 'biovision:api_url'
+export const LIVE_TUNNEL_URL = 'https://shake-schedules-own-distinguished.trycloudflare.com'
 
 export function getApiBase(): string {
   if (typeof window !== 'undefined') {
@@ -11,7 +12,9 @@ export function getApiBase(): string {
       return custom.trim().replace(/\/+$/, '')
     }
   }
-  return (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, '') || ''
+  const envUrl = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, '')
+  if (envUrl) return envUrl
+  return LIVE_TUNNEL_URL
 }
 
 export function setApiBase(url: string): void {
@@ -34,7 +37,7 @@ export const UPLOAD_TIMEOUT_MS = 10 * 60 * 1000
 
 export async function isBackendOnline(timeoutMs = 5000, targetUrl?: string): Promise<boolean> {
   const base = targetUrl !== undefined ? targetUrl.replace(/\/+$/, '') : getApiBase()
-  if (!base && typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+  if (!base) {
     return false
   }
   const controller = new AbortController()
