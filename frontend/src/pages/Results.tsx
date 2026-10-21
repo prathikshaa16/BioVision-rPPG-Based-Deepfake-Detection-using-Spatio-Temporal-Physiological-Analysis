@@ -183,19 +183,42 @@ function NoFaceView({ result }: { result: AnalysisResult }) {
       </header>
 
       <div className={`glass-card--accent p-8 ${THEMES.NO_FACE.border}`}>
-        <div className="text-center max-w-md mx-auto space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+        <div className="text-center max-w-lg mx-auto space-y-5">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto">
             <FaUserSlash className="w-8 h-8" />
           </div>
-          <h3 className="text-2xl font-bold text-slate-200">No Usable Face Identified</h3>
+          <div>
+            <h3 className="text-2xl font-bold text-slate-100">No Usable Face Identified</h3>
+            <p className="text-xs font-mono text-amber-400/90 mt-1">
+              MTCNN Facial Detection Verdict: 0 Faces Detected Across {result.frames_sampled || 32} Sampled Frames
+            </p>
+          </div>
           <p className="text-sm text-slate-400 leading-relaxed">
-            The MTCNN detector did not find any recognizable facial bounding boxes across the sampled video sequence.
-            Because BioVision requires standardized facial crops for both spatial feature extraction and rPPG physiological analysis,
-            no deepfake probability was computed.
+            The spatial face detector did not locate recognizable human facial bounding boxes in this video.
+            Because BioVision's dual-branch architecture requires aligned facial crops for both EfficientNet-B4 spatial feature extraction and CHROM rPPG subcutaneous blood volume pulse recovery, deepfake classification was aborted.
+            No REAL or FAKE probability was computed.
           </p>
-          <button onClick={() => navigate('/analysis')} className="btn btn-primary mt-2">
-            Try Another Video
-          </button>
+
+          <div className="grid grid-cols-3 gap-3 py-3 border-y border-slate-800 text-left">
+            <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+              <span className="text-[10px] uppercase font-mono text-slate-400 block">Frames Sampled</span>
+              <span className="text-lg font-bold text-slate-200">{result.frames_sampled || 32}</span>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+              <span className="text-[10px] uppercase font-mono text-slate-400 block">Faces Detected</span>
+              <span className="text-lg font-bold text-amber-400">{result.faces_detected ?? 0}</span>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+              <span className="text-[10px] uppercase font-mono text-slate-400 block">rPPG Status</span>
+              <span className="text-lg font-bold text-slate-400">SKIPPED</span>
+            </div>
+          </div>
+
+          <div className="pt-2 flex items-center justify-center gap-3">
+            <button onClick={() => navigate('/analysis')} className="btn btn-primary px-6 py-2.5">
+              Analyze Another Video
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -264,7 +287,12 @@ export default function Results() {
     )
   }
 
-  if (result.result === 'NO_FACE') {
+  const isNoFace =
+    result.result === 'NO_FACE' ||
+    result.frames_with_faces === 0 ||
+    (result.faces_detected !== undefined && result.faces_detected === 0)
+
+  if (isNoFace) {
     return <NoFaceView result={result} />
   }
 

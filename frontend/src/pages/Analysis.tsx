@@ -6,7 +6,7 @@ import { API_BASE, MAX_UPLOAD_BYTES, UPLOAD_TIMEOUT_MS, isBackendOnline } from '
 import type { AnalysisResult } from '../lib/types'
 import { isAnalysisResult } from '../lib/types'
 import { saveLastResult, addToHistory } from '../lib/api'
-import { createShowcaseResult } from '../lib/showcaseResult'
+import { createShowcaseResult, detectHasFaceInVideo, createNoFaceResult } from '../lib/showcaseResult'
 import { formatFileSize } from '../lib/format'
 import {
   FaCloudUploadAlt,
@@ -136,7 +136,8 @@ export default function Analysis() {
       }
 
       try {
-        const result = createShowcaseResult(file)
+        const hasFace = await detectHasFaceInVideo(file)
+        const result = createShowcaseResult(file, hasFace)
         saveLastResult(result)
         addToHistory(result)
         setSelectedFile(null)
@@ -146,11 +147,7 @@ export default function Analysis() {
       } catch (err: any) {
         setPhase('idle')
         setProgress(0)
-        if (err.message && err.message.includes('NO_FACE_DETECTED')) {
-          setError('No faces were detected in the video. Please try a video with visible faces.')
-        } else {
-          setError(err.message || 'Analysis failed.')
-        }
+        setError(err.message || 'Analysis failed.')
       }
     },
     [navigate]
@@ -230,7 +227,12 @@ export default function Analysis() {
       try {
         const resp = JSON.parse(xhr.responseText)
         if (resp.error === 'NO_FACE_DETECTED') {
-          setError('No faces were detected in the video. Please try a video with visible faces.')
+          const noFaceResult = createNoFaceResult(selectedFile)
+          saveLastResult(noFaceResult)
+          addToHistory(noFaceResult)
+          setSelectedFile(null)
+          navigate('/results', { state: { upload: noFaceResult } })
+          return
         } else if (resp.error === 'INVALID_VIDEO') {
           setError(resp.detail || 'The file could not be read as a valid video. Please check the file and try again.')
         } else if (resp.detail) {

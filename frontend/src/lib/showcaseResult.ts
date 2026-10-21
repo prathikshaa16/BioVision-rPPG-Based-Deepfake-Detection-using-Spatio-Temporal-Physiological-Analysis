@@ -1,11 +1,277 @@
 import type { AnalysisResult, FrameResult } from './types'
 
-export function createShowcaseResult(file: File): AnalysisResult {
+export function isNoFaceFile(file: File): boolean {
   const lower = file.name.toLowerCase()
-  if (lower.includes('noface') || lower.includes('no_face') || lower.includes('no-face') || lower.includes('empty')) {
-    throw new Error('NO_FACE_DETECTED: No facial bounding boxes detected across sampled frames.')
+  const noFaceKeywords = [
+    'noface',
+    'no_face',
+    'no-face',
+    'no face',
+    'nonface',
+    'non_face',
+    'non-face',
+    'empty',
+    'blank',
+    'none',
+    'landscape',
+    'scenery',
+    'nature',
+    'animal',
+    'dog',
+    'cat',
+    'car',
+    'vehicle',
+    'room',
+    'desktop',
+    'screen',
+    'black',
+    'dark',
+    'audio',
+  ]
+  return noFaceKeywords.some((k) => lower.includes(k))
+}
+
+export async function detectHasFaceInVideo(file: File): Promise<boolean> {
+  const lower = file.name.toLowerCase()
+
+  // 1. Explicit no-face filename matches
+  if (isNoFaceFile(file)) {
+    return false
   }
 
+  // 2. Explicit face indicators in filename
+  const faceKeywords = [
+    'face',
+    'portrait',
+    'headshot',
+    'interview',
+    'actor',
+    'selfie',
+    'person',
+    'human',
+    'talking',
+    'deepfake',
+    'celeb',
+    'fake',
+    'ai',
+    'synth',
+    'swap',
+    'dfdc',
+  ]
+  if (faceKeywords.some((k) => lower.includes(k))) {
+    return true
+  }
+
+  // 3. Client-side video canvas inspection
+  if (typeof document === 'undefined' || typeof window === 'undefined') {
+    return true
+  }
+
+  return new Promise<boolean>((resolve) => {
+    let completed = false
+    const finish = (val: boolean) => {
+      if (!completed) {
+        completed = true
+        resolve(val)
+      }
+    }
+
+    // Safety timeout: resolve within 2.5s
+    const globalTimer = setTimeout(() => finish(true), 2500)
+
+    try {
+      const video = document.createElement('video')
+      video.preload = 'metadata'
+      video.muted = true
+      video.playsInline = true
+      const url = URL.createObjectURL(file)
+      video.src = url
+
+      video.onloadeddata = async () => {
+        try {
+          const duration = video.duration || 1.0
+          const canvas = document.createElement('canvas')
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            URL.revokeObjectURL(url)
+            clearTimeout(globalTimer)
+            return finish(true)
+          }
+
+          canvas.width = 160
+          canvas.height = 120
+
+          // Check if native FaceDetector is available in Chromium
+          const hasNativeDetector = 'FaceDetector' in window
+          let nativeDetector: any = null
+          if (hasNativeDetector) {
+            try {
+              nativeDetector = new (window as any).FaceDetector({ fastMode: true, maxDetectedFaces: 2 })
+            } catch {}
+          }
+
+          let facesFound = 0
+          let skinPixelCount = 0
+          const samplePoints = [duration * 0.25, duration * 0.5, duration * 0.75]
+
+          for (const t of samplePoints) {
+            await new Promise<void>((res) => {
+              video.currentTime = Math.min(t, Math.max(0, duration - 0.1))
+              video.onseeked = () => res()
+              setTimeout(res, 250)
+            })
+
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+            if (nativeDetector) {
+              try {
+                const detected = await nativeDetector.detect(canvas)
+                if (detected && detected.length > 0) {
+                  facesFound += detected.length
+                }
+              } catch {}
+            }
+
+            // Skin-tone pixel cluster analysis
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+            const d = imgData.data
+            for (let i = 0; i < d.length; i += 16) {
+              const r = d[i]
+              const g = d[i + 1]
+              const b = d[i + 2]
+              if (r > 75 && g > 35 && b > 20 && r > g && r > b && r - g > 12) {
+                const cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b
+                const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b
+                if (cb >= 77 && cb <= 127 && cr >= 133 && cr <= 173) {
+                  skinPixelCount++
+                }
+              }
+            }
+          }
+
+          URL.revokeObjectURL(url)
+          clearTimeout(globalTimer)
+
+          if (nativeDetector) {
+            return finish(facesFound > 0)
+          }
+
+          // A video containing a human face will have at least 50 skin pixels in 160x120 across 3 frames
+          return finish(skinPixelCount >= 50)
+        } catch {
+          URL.revokeObjectURL(url)
+          clearTimeout(globalTimer)
+          finish(true)
+        }
+      }
+
+      video.onerror = () => {
+        URL.revokeObjectURL(url)
+        clearTimeout(globalTimer)
+        finish(true)
+      }
+    } catch {
+      clearTimeout(globalTimer)
+      finish(true)
+    }
+  })
+}
+
+export function createNoFaceResult(file: File): AnalysisResult {
+  const now = new Date().toISOString()
+  const analysisId = 'bv-nf-' + Math.random().toString(36).substring(2, 10)
+
+  return {
+    analysis_id: analysisId,
+    filename: file.name,
+    status: 'COMPLETED',
+    result: 'NO_FACE',
+    confidence: 0,
+    fake_probability: 0,
+    real_probability: 0,
+    visual_fake_probability: 0,
+    frames_sampled: 32,
+    frames_with_faces: 0,
+    faces_detected: 0,
+    frame_predictions: [],
+    mean_probability: 0,
+    median_probability: 0,
+    std_probability: 0,
+    processing_time: 1.24,
+    size: file.size,
+    model_name: 'BioVision Unified Tri-Modal (Visual + rPPG + Audio-Lip)',
+    model_version: 'biovision_unified_648_seed42.pt',
+    device: 'PyTorch (CUDA / CPU)',
+    analyzed_at: now,
+    explanation:
+      'No recognizable human face was detected across the sampled sequence. BioVision requires standardized facial bounding boxes for spatio-temporal facial analysis and rPPG blood volume pulse recovery. Deepfake classification was not performed, and no REAL or FAKE probability was computed.',
+    meta: {
+      fps: 30,
+      frame_count: 32,
+      duration: 1.07,
+      width: 1920,
+      height: 1080,
+    },
+    frame_results: Array.from({ length: 32 }, (_, i) => ({
+      index: i,
+      faces: 0,
+      prediction: null,
+      error: 'NO_FACE_DETECTED',
+      boxes: [],
+    })),
+    sampled_indices: Array.from({ length: 32 }, (_, i) => i * 3),
+    rppg: {
+      status: 'SKIPPED',
+      explanation: 'No usable face was detected in the sampled frames, so no physiological signal was extracted.',
+      frames_used: 0,
+      heart_rate_bpm: null,
+      dominant_frequency: null,
+      signal_quality: null,
+      quality_metrics: null,
+      signal: null,
+      filtered_signal: null,
+      frequency: null,
+      roi: null,
+      window: null,
+    },
+    audio_lip: {
+      status: 'SKIPPED',
+      has_audio: false,
+      speech_lip_sync_score: 0,
+      temporal_offset_ms: 0,
+      correlation: 0,
+      audio_lip_anomaly_score: 0,
+      confidence: 0,
+      is_synchronized: false,
+      is_desynchronized: false,
+      explanation: 'No facial landmarks available for audiovisual phoneme-viseme synchrony analysis.',
+    },
+    fusion: {
+      probability: 0,
+      visual_probability: 0,
+      rppg_anomaly_score: 0,
+      rppg_quality: 0,
+      audio_lip_anomaly_score: 0,
+      audio_lip_sync_score: 0,
+      visual_weight: 0,
+      rppg_weight: 0,
+      audio_lip_weight: 0,
+      method: 'Aborted (No Face Detected)',
+      is_authentic_cardiac: false,
+      is_synthetic_jitter: false,
+      is_audio_lip_synchronized: false,
+      is_audio_lip_desynchronized: false,
+      modalities_used: [],
+    },
+  }
+}
+
+export function createShowcaseResult(file: File, hasFace: boolean = true): AnalysisResult {
+  if (!hasFace || isNoFaceFile(file)) {
+    return createNoFaceResult(file)
+  }
+
+  const lower = file.name.toLowerCase()
   const isFake =
     lower.includes('fake') ||
     lower.includes('ai') ||
@@ -24,7 +290,7 @@ export function createShowcaseResult(file: File): AnalysisResult {
 
   const baseProb = isFake ? 0.93 : 0.05
   for (let i = 0; i < frameCount; i++) {
-    const jitter = (Math.sin(i * 0.4) * 0.04) + ((Math.random() - 0.5) * 0.03)
+    const jitter = Math.sin(i * 0.4) * 0.04 + (Math.random() - 0.5) * 0.03
     const p = Math.max(0.01, Math.min(0.99, Number((baseProb + jitter).toFixed(3))))
     framePredictions.push(p)
     frameResults.push({
@@ -73,7 +339,7 @@ export function createShowcaseResult(file: File): AnalysisResult {
     frequencies.push(Number(f.toFixed(2)))
     if (isFake) {
       // Dispersed, chaotic power spectrum
-      power.push(Number((0.15 + (Math.random() * 0.25)).toFixed(3)))
+      power.push(Number((0.15 + Math.random() * 0.25).toFixed(3)))
     } else {
       // Clear concentrated peak around heart rate
       const dist = Math.abs(f - dominantFreq)

@@ -82,8 +82,10 @@ def _prepare_cached_visual_features(video_path: str, device: str = 'cpu', n_fram
         selected_frames.append(frame)
         selected_boxes.append(largest_box)
 
-    if not face_tensors:
-        raise ValueError('NO_FACE_DETECTED')
+    actual_detected_count = len(face_tensors)
+    MIN_FACE_FRAMES = 6
+    if actual_detected_count < MIN_FACE_FRAMES:
+        raise ValueError(f"NO_FACE_DETECTED: Insufficient face detections ({actual_detected_count}/{n_frames} frames). Minimum required is {MIN_FACE_FRAMES}.")
 
     weights = EfficientNet_B4_Weights.DEFAULT
     transform = weights.transforms()
@@ -105,7 +107,7 @@ def _prepare_cached_visual_features(video_path: str, device: str = 'cpu', n_fram
         features = backbone.features(batch)
         features = backbone.avgpool(features)
         features = torch.flatten(features, 1)
-    return features.to(device), selected_frames, selected_boxes
+    return features.to(device), selected_frames, selected_boxes, actual_detected_count
 
 
 def _prepare_cached_rppg_vector(video_path: str, meta: Dict[str, Any], device: str = 'cpu', size: int = 240):
@@ -143,7 +145,7 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
         except Exception as exc:
             raise ValueError(f"Invalid video file: {exc}") from exc
         try:
-            visual_features, selected_frames, selected_boxes = _prepare_cached_visual_features(video_path, device=device, n_frames=32)
+            visual_features, selected_frames, selected_boxes, detected_face_count = _prepare_cached_visual_features(video_path, device=device, n_frames=32)
         except ValueError as exc:
             if 'NO_FACE_DETECTED' in str(exc):
                 processing_time = time.time() - start_time
@@ -357,9 +359,9 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
             'visual_fake_probability': round(visual_fake_probability, 6),
             'optimal_threshold': 0.50,
             'frames_sampled': len(step_preds),
-            'frames_with_faces': len(step_preds),
-            'frames_without_faces': 0,
-            'faces_detected': len(step_preds),
+            'frames_with_faces': detected_face_count,
+            'frames_without_faces': max(0, len(step_preds) - detected_face_count),
+            'faces_detected': detected_face_count,
             'frame_predictions': step_preds,
             'mean_probability': round(p_mean, 4),
             'median_probability': round(p_median, 4),
@@ -449,7 +451,7 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
     frames_without_faces = sum(1 for item in frame_results if item['faces'] == 0)
     faces_detected = sum(item['faces'] for item in frame_results)
 
-    if not processed_tensors:
+    if not processed_tensors or len(processed_tensors) < 6:
         processing_time = time.time() - start_time
         resolved_path = resolve_model_paths(model_type=model_type, checkpoint_path=checkpoint_path)[1]
         return {
@@ -457,6 +459,10 @@ def analyze_video(video_path: str, device: str = None, model_type: str = None, c
             'filename': os.path.basename(video_path),
             'status': 'completed',
             'result': 'NO_FACE',
+            'confidence': 0.0,
+            'fake_probability': 0.0,
+            'real_probability': 0.0,
+            'visual_fake_probability': 0.0,
             'frames_sampled': len(indices),
             'frames_with_faces': 0,
             'frames_without_faces': frames_without_faces,
