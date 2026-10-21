@@ -34,8 +34,8 @@ export function isNoFaceFile(file: File): boolean {
 
 /**
  * Pure video inspection that determines if a human face or person actually appears in the video
- * using embedded deep cascade face classification (Pico FaceFinder).
- * Does NOT rely on filename assumptions.
+ * using aspect-ratio-preserving embedded cascade face classification (Pico FaceFinder).
+ * Handles portrait (vertical phone videos), landscape, and square videos accurately.
  */
 export async function detectHasFaceInVideo(file: File): Promise<boolean> {
   // If explicitly named with noface keywords, immediately return false
@@ -56,8 +56,8 @@ export async function detectHasFaceInVideo(file: File): Promise<boolean> {
       }
     }
 
-    // Default to false on timeout
-    const globalTimer = setTimeout(() => finish(false), 9000)
+    // Safety timeout: default to false (never assume a face if unconfirmed)
+    const globalTimer = setTimeout(() => finish(false), 12000)
 
     try {
       const container = document.createElement('div')
@@ -89,10 +89,19 @@ export async function detectHasFaceInVideo(file: File): Promise<boolean> {
 
       const processVideo = async () => {
         try {
+          const vW = video.videoWidth || 320
+          const vH = video.videoHeight || 240
           const duration = video.duration || 1.0
+
+          // Aspect-ratio preserving canvas scaling: max dimension 320
+          const maxDim = 320
+          const scale = maxDim / Math.max(vW, vH)
+          const cW = Math.max(120, Math.round(vW * scale))
+          const cH = Math.max(120, Math.round(vH * scale))
+
           const canvas = document.createElement('canvas')
-          canvas.width = 320
-          canvas.height = 240
+          canvas.width = cW
+          canvas.height = cH
           const ctx = canvas.getContext('2d', { willReadFrequently: true })
 
           if (!ctx) {
@@ -100,6 +109,7 @@ export async function detectHasFaceInVideo(file: File): Promise<boolean> {
             return finish(false)
           }
 
+          // Check if native Chromium FaceDetector API is available as secondary boost
           const hasNativeDetector = 'FaceDetector' in window
           let nativeDetector: any = null
           if (hasNativeDetector) {
@@ -109,17 +119,25 @@ export async function detectHasFaceInVideo(file: File): Promise<boolean> {
           }
 
           let faceDetections = 0
-          const samplePoints = [0.15, 0.35, 0.50, 0.70, 0.85].map((f) => f * duration)
+          // Sample early and mid timestamps where frames buffer rapidly and faces are present
+          const samplePoints = [
+            Math.min(1.0, duration * 0.08),
+            Math.min(3.0, duration * 0.20),
+            Math.min(6.0, duration * 0.35),
+            Math.min(10.0, duration * 0.55),
+            Math.min(16.0, duration * 0.75),
+          ]
 
           for (const t of samplePoints) {
             await new Promise<void>((res) => {
               video.currentTime = Math.min(t, Math.max(0, duration - 0.1))
               video.onseeked = () => res()
-              setTimeout(res, 350)
+              setTimeout(res, 600)
             })
 
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
 
+            // Method 1: Hardware-accelerated FaceDetector (Chromium)
             if (nativeDetector) {
               try {
                 const detected = await nativeDetector.detect(canvas)
@@ -130,8 +148,9 @@ export async function detectHasFaceInVideo(file: File): Promise<boolean> {
               } catch {}
             }
 
+            // Method 2: Embedded neural pixel cascade detector (Pico FaceFinder)
             const picoDets = detectFacesInCanvas(canvas)
-            const strongFaces = picoDets.filter((d) => d.score >= 1.5)
+            const strongFaces = picoDets.filter((d) => d.score >= 1.2)
             if (strongFaces.length > 0) {
               faceDetections++
             }
