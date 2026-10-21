@@ -40,9 +40,9 @@ def fuse_probabilities(
     snr = metrics.get('snr_db') or 0.0
 
     is_authentic_cardiac = (
-        has_rppg and hr is not None and 50.0 <= hr <= 108.0 and
-        (dfreq is None or (0.80 <= dfreq <= 1.80)) and
-        (quality >= 0.35 or snr >= 3.5)
+        has_rppg and hr is not None and 50.0 <= hr <= 118.0 and
+        (dfreq is None or (0.80 <= dfreq <= 1.98)) and
+        (quality >= 0.28 or snr >= 3.0)
     )
 
     is_synthetic_jitter = (
@@ -87,6 +87,13 @@ def fuse_probabilities(
             w_audio = 0.25
             fused = w_vis * visual + w_rppg * rppg_anomaly + w_audio * audio_anomaly
             method = 'tri-modal fusion (verified authentic cardiac pulse + synchronized phoneme-viseme alignment)'
+        elif is_authentic_cardiac and not is_audio_desync:
+            # Verified biological cardiac pulse with neutral ambient audio
+            w_vis = 0.35
+            w_rppg = 0.55
+            w_audio = 0.10
+            fused = w_vis * visual + w_rppg * rppg_anomaly + w_audio * audio_anomaly
+            method = 'tri-modal fusion (verified authentic biological cardiac pulse; ambient acoustics)'
         elif is_synthetic_jitter or is_audio_desync:
             # Active synthetic manipulation signature in rPPG jitter or audio-visual desync
             w_vis = 0.35
@@ -132,9 +139,9 @@ def fuse_probabilities(
             w_audio = 0.60
             method = 'dual-modal fusion (Audiovisual desynchronization detected; rPPG unavailable)'
         else:
-            w_vis = 0.70
-            w_audio = 0.30
-            method = 'dual-modal fusion (Visual-Temporal + Audio-Lip)'
+            w_vis = 0.85
+            w_audio = 0.15
+            method = 'dual-modal fusion (Visual-Temporal; ambient audio)'
         fused = w_vis * visual + w_audio * audio_anomaly
         return {
             'probability': round(float(fused), 6),

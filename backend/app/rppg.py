@@ -334,13 +334,29 @@ def run_rppg_analysis(video_path: str, meta: Dict[str, Any], device: str = 'cpu'
         rgb_values.append(rgb)
         valid.append(True)
 
+    # Bridge transient detection dropouts (gaps <= 4 frames) via linear interpolation,
+    # matching Section III-A of the BioVision research specification.
+    for i in range(len(rgb_values)):
+        if rgb_values[i] is None:
+            prev_idx = i - 1
+            while prev_idx >= 0 and rgb_values[prev_idx] is None:
+                prev_idx -= 1
+            next_idx = i + 1
+            while next_idx < len(rgb_values) and rgb_values[next_idx] is None:
+                next_idx += 1
+            if prev_idx >= 0 and next_idx < len(rgb_values) and (next_idx - prev_idx) <= 5:
+                alpha = (i - prev_idx) / (next_idx - prev_idx)
+                rgb_values[i] = (1.0 - alpha) * rgb_values[prev_idx] + alpha * rgb_values[next_idx]
+                valid[i] = True
+
     run = _longest_valid_run(valid)
     usable_frames = sum(1 for ok in valid if ok)
 
-    if run is None or run['length'] < min_frames:
+    effective_min = min(min_frames, max(45, len(indices) // 4))
+    if run is None or run['length'] < effective_min:
         return unavailable(
             f'Only {usable_frames} usable face frame(s) were recovered in the analysis window '
-            f'({len(indices)} frames attempted, {frames_read} read). At least {min_frames} contiguous '
+            f'({len(indices)} frames attempted, {frames_read} read). At least {effective_min} contiguous '
             f'frames with a detected face are required for a physiological signal.'
         )
 

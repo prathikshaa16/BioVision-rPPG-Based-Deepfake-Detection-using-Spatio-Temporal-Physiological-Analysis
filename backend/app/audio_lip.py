@@ -345,10 +345,11 @@ def analyze_audio_lip_correspondence(
     offset_ms = round(float(best_lag * frame_ms), 1)
 
     # 3. Synchrony and Anomaly Scoring
-    # Genuine speech: r_corr is positive (0.25 - 0.70), offset within ±60 ms
-    # Dubbed / Desynchronized deepfake: offset >= 100 ms or r_corr <= 0.08
+    # Genuine speech: r_corr is positive (0.22 - 0.70), offset within ±80 ms
+    # Dubbed / Desynchronized deepfake: offset >= 120 ms with significant cross-modal correlation
+    # Ambient / Non-speech sound: low correlation at all offsets (e.g. music or room noise)
     is_synchronized = (r_corr >= 0.22) and (abs(offset_ms) <= 80.0)
-    is_desynchronized = (abs(offset_ms) >= 120.0 and best_corr > 0.30) or (r_corr < 0.05 and en_std > 0.01 and ap_std > 0.01)
+    is_desynchronized = (abs(offset_ms) >= 120.0 and best_corr >= 0.40 and (best_corr - r_corr) >= 0.25)
 
     if is_synchronized:
         sync_score = min(1.0, 0.50 + 0.50 * r_corr)
@@ -365,11 +366,12 @@ def analyze_audio_lip_correspondence(
             f"and lip articulation (synchrony r={round(r_corr, 3)}). Characteristic of artificial lip sync or audio-dubbed deepfake."
         )
     else:
-        sync_score = 0.50 + 0.20 * r_corr
-        anomaly_score = 0.35 + 0.20 * (1.0 - max(0.0, r_corr))
+        # Neutral baseline for ambient audio, non-speech background sound, or subtle expressions
+        sync_score = 0.50
+        anomaly_score = 0.25
         explanation = (
-            f"Audio-lip alignment is moderate (correlation r={round(r_corr, 3)}, temporal drift {offset_ms} ms). "
-            f"Subtle speech or ambient noise observed."
+            f"Audio track reflects ambient background sound or non-speech acoustics (correlation r={round(r_corr, 3)}). "
+            f"Neutral audio-lip weighting applied."
         )
 
     return {
