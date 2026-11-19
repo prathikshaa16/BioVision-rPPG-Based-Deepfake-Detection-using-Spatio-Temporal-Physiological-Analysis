@@ -1,6 +1,8 @@
 # BioVision: Multimodal Deepfake Detection via Spatio-Temporal, Physiological, and Audio-Lip Features
 
 [![IEEE Format Paper](https://img.shields.io/badge/Paper-IEEE%20Format-blue.svg)](biovision_ieee_research_paper_final.md)
+[![Project Master Guide](https://img.shields.io/badge/Docs-Project%20Master%20Guide-teal.svg)](biovision_complete_project_master_guide.md)
+[![8-Min Demo Script](https://img.shields.io/badge/Video%20Demo-8--Min%20Script-purple.svg)](video_demo_presentation_script_8min.md)
 [![Benchmark Accuracy](https://img.shields.io/badge/Unified%20Benchmark%20Accuracy-95.22%25-brightgreen.svg)](#benchmark-performance-at-canonical-threshold-tau--050)
 [![ROC-AUC](https://img.shields.io/badge/ROC--AUC-0.9685-success.svg)](#benchmark-performance-at-canonical-threshold-tau--050)
 [![Zero-Shot Transfer AUC](https://img.shields.io/badge/Zero--Shot%20Transfer-0.9125-orange.svg)](#zero-shot-cross-dataset-generalization)
@@ -232,7 +234,9 @@ BioVision-rPPG-Based-Deepfake-Detection/
 │   ├── ablation_study.json          # 6-variant ablation evaluation data
 │   ├── cross_dataset_evaluation.json# Zero-shot transfer records (AUC: 0.9125)
 │   └── official_test_predictions.csv# Per-video prediction logs for all 648 benchmark samples
-└── biovision_ieee_research_paper_final.md  # IEEE Conference format research manuscript
+├── biovision_ieee_research_paper_final.md       # Full IEEE Conference submission manuscript
+├── biovision_complete_project_master_guide.md   # Complete technical encyclopedia & viva Q&A guide
+└── video_demo_presentation_script_8min.md       # 8-minute demonstration script & production guide
 ```
 
 ---
