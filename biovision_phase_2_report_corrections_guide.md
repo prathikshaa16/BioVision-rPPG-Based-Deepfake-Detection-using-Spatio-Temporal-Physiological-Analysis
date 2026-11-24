@@ -53,13 +53,18 @@ This document provides exact, copy-pasteable replacement text, LaTeX mathematica
 > To evaluate BioVision under realistic operational conditions while benchmarking directly against published academic literature, training, validation, and testing cohorts were established under two distinct, mathematically audited partitioning protocols:
 > 
 > 1. **Celeb-DF v2 Benchmark Partitioning (Official Video-Disjoint Split):**  
->    The test cohort for Celeb-DF v2 comprises exactly $518$ videos ($178$ Real, $340$ Fake) taken directly from the official benchmark partition (`List_of_testing_videos.txt`) published by Li et al. (CVPR 2020). By design of the official benchmark, this partition enforces strict **video-level disjointness** (no test video, clip, or frame appears in the training or validation sets). However, because the official benchmark draws test videos from $56$ of the $59$ celebrity identities present in the dataset, the Celeb-DF v2 split is video-disjoint rather than identity-disjoint. The remaining $6,011$ videos were deterministically partitioned into Training ($5,429$ videos) and Validation ($582$ videos) using a SHA-256 hash modulo 10 policy ($\text{bucket} = 0 \to \text{validation}$, remaining $90\% \to \text{training}$).
+>    The raw Celeb-DF v2 dataset contains $6,529$ videos ($590$ Celeb-real, $300$ YouTube-real, and $5,639$ Celeb-synthesis). After applying BioVision's **modality validity gating**—which filters out corrupted clips, sequences with fewer than $32$ observable frames, extreme head yaw obscuring facial regions, or silent audio tracks—exactly **$5,514$ valid multimodal videos** are retained:
+>    - **Training Partition:** $4,496$ videos ($640$ Real, $3,856$ Fake).
+>    - **Validation Partition:** $500$ videos ($72$ Real, $428$ Fake).
+>    - **Testing Partition:** $518$ videos ($178$ Real, $340$ Fake).
+>    
+>    The test cohort of $518$ videos is taken directly from the official benchmark partition (`List_of_testing_videos.txt`) published by Li et al. (CVPR 2020). By design of the official benchmark, this partition enforces strict **video-level disjointness** (no test video, clip, or frame appears in the training or validation sets). However, because the official benchmark draws test videos from $56$ of the $59$ celebrity identities present in the dataset, the Celeb-DF v2 split is video-disjoint rather than identity-disjoint. The remaining $4,996$ valid videos were deterministically partitioned into Training ($4,496$ videos) and Validation ($500$ videos, approx. 10%) using a SHA-256 hash modulo 10 policy ($\text{bucket} = 0 \to \text{validation}$, remainder $\to \text{training}$).
 > 
 > 2. **DFDC Cohort Partitioning (Strict Actor-Disjoint Split):**  
 >    To evaluate generalization on human subjects completely unseen during training, the DFDC cohort was partitioned using an **identity-disjoint actor segregation protocol** (`backend/scripts/make_dfdc_manifest.py`). Facial subject IDs were mapped into strictly disjoint subsets:
 >    - **Training Partition:** Actors `01` through `18` ($1,849$ video sequences).
->    - **Validation Partition:** Actors `19` through `23` ($166$ video sequences).
->    - **Testing Partition:** Actors `24` through `28` ($130$ video sequences; $59$ Real, $71$ Fake).
+>    - **Validation Partition:** Actors `19` through `23` ($70$ validity-curated video sequences).
+>    - **Testing Partition:** Actors `24` through `28` ($130$ validity-curated video sequences; $59$ Real, $71$ Fake).
 >    
 >    Cross-split verification via `backend/scripts/audit_manifests.py` confirmed zero actor overlap ($\text{Overlap} = \emptyset$) between training and testing sets. This establishes that the $95.38\%$ accuracy and $0.9125$ zero-shot transfer ROC-AUC on DFDC evaluate true physical and biological anomaly detection rather than facial identity memorization.
 
