@@ -37,10 +37,10 @@ From a user’s perspective, an analysis begins by selecting a video and followi
 
 ### 📝 Replacement Text:
 ```latex
-\noindent\textbf{TC01 and TC02: Successful real and fake video ingestion.} For TC01, the authentic interview asset \texttt{15242.mp4} ($1080 \times 1920$ pixels, 284 frames) returned HTTP 200 OK with result REAL, model score 0.8078, estimated heart rate 85.56 BPM, SNR 4.98 dB, and a tri-modal fusion result with an available rPPG signal. For TC02, the latent-diffusion face-swap asset \texttt{ai.mp4} returned HTTP 200 OK with result FAKE, model score of 0.5831, and rPPG status UNAVAILABLE (pulse suppressed).
+\noindent\textbf{TC01 and TC02: Successful real and fake video ingestion.} For TC01, the authentic interview asset \texttt{15242.mp4} ($1080 \times 1920$ pixels, 284 frames) returned HTTP 200 OK with result REAL, a model score of 0.8078, estimated heart rate 85.56 BPM, SNR 4.98 dB, and a tri-modal fusion result with an available rPPG signal. For TC02, the latent-diffusion face-swap asset \texttt{ai.mp4} returned HTTP 200 OK with result FAKE, a model score of 0.5831, and rPPG status UNAVAILABLE (pulse suppressed).
 ```
 
-*(Changed: Removed "verified authentic biological cardiac pulse" and simplified TC02 from "confidence and fused probability 0.5831" to "model score of 0.5831".)*
+*(Changed: Removed "verified authentic biological cardiac pulse" and simplified TC02 from "confidence and fused probability 0.5831" to "a model score of 0.5831".)*
 
 ---
 
